@@ -233,3 +233,11 @@ starting_point <-function(data, nrcol, quant = 0.9){
   resk <- t(apply(startk, 1, function(x) x/sum(x)))
   return(resk)
 }
+
+
+extr_coeff_mix_log <- function( A , alpha){
+  Apower <- A^(alpha)
+  sum_cols <-  apply(A , 2, sum)
+  res <- sum(  sum_cols^(1/alpha) )
+  return(res)
+}

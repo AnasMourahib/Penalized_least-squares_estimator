@@ -1,4 +1,5 @@
 cross_validation<-function(d , r, A , grid, lambda, num_col = NULL, start , type = c("SSR_row_HR", "SSR_row_log"), p , w , num_class=10){
+  print(lambda)
   #start <- c(start, 0.5)    
   w_train <- w$train 
   w_test <- w$test
