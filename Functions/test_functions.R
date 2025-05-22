@@ -4,8 +4,6 @@ library(gtools) # calculating permutations
 library(tailDepFun) # defining a grid
 library(ggplot2) # plotting
 library(tidyverse)
-install.packages("profmem")  # Only needed the first time
-library(profmem)
 dyn.load("main.dll")
 source("Functions/Simulation_mixture_model.R")
 source("Functions/Starting_points.R")
@@ -68,7 +66,7 @@ f <- function(seed){
  return(res)
 }
 
-mem_used <- profmem(res <- f(seed = 123))
+
 
 
 list2 <- list()
