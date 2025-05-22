@@ -13,9 +13,7 @@ source("Functions/Help_functions.R")
 source("Functions/param_estim.R")
 source("Functions/cross_validation.R")
 source("Functions/main.R")
-source("Functions/param_estim_2.R")
-source("Functions/cross_validation_2.R")
-source("Functions/main_2.R")
+
 
 
 
