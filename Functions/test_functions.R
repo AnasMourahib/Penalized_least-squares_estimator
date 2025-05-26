@@ -79,9 +79,113 @@ for(i in 1 : 1){
 
 
 
+#############Transform data 
+n <- 50
+list <- list() 
+for(i in 1: n){         
+  file_path <- paste0("C:/Users/mourahib/Desktop/github/Penalized_least-squares_estimator/Results/DA_mix_HR/effect_tail_fraction/N2000/pen1/result_",i,".rds")
+  if(file.exists(file_path)){
+    result <- readRDS(file_path)
+    list[[i]] <- result 
+  }
+  else(print(i))
+}
+saveRDS(list , file= "C:/Users/mourahib/Desktop/github/Penalized_least-squares_estimator/Results/DA_mix_HR/effect_tail_fraction/N2000/pen1.rds" )
 
 
 
 
+###Effect of the tail fraction on teh score EDS      
+n <- 50   #Replace p=0.2 by p=0.4 or p=0.6  4''
+list <- readRDS(file= paste0("C:/Users/mourahib/Desktop/github/Penalized_least-squares_estimator/Results/DA_mix_HR/effect_tail_fraction/N2000/pen1.rds"))
+#Calculus of EDS score. 
+EDscore_p1 <- rep(0 , 10)
+for( j in 1:10  ){
+  list_matrices <- list()  
+  for(i in 1: n){
+    list_matrices <- list[[i]][[j]]$Estimation$pls_matrix
+    scorei <- EDS( list_matrices , A)
+    EDscore_p1[j] <- EDscore_p1[j] + scorei/n
+  }
+}
 
 
+#############plot EDS
+colors <- c("#E69F00", "#56B4E9", "#009E73", "#D55E00")  # Orange, Blue, Green
+
+# X-axis values
+x_values <- seq(0.02 , 0.2 , by=0.02) 
+
+# Set up an empty plot with appropriate axis limits
+par(mgp = c(2, 0.7, 0))  # Adjust label position
+plot(x_values, EDscore_p0.2 , type = "l", col = colors[1], lty = 1, lwd = 2.5, 
+     ylim =  c(0 , 1), 
+     xlab = "taik fraction k/n",
+      ylab = "" , #  "ED-S", 
+     cex.lab = 1.5, cex.axis = 1.3, 
+     xaxt = "n")
+
+# Add custom x-axis ticks and labels
+axis(1, at = x_values, labels = x_values, cex.axis = 1.3)
+
+
+
+
+# Add lines for the other vectors
+lines(x_values, EDscore_p0.4 , col = colors[2], lty = 2, lwd = 2.5)
+lines(x_values, EDscore_p0.6 , col = colors[3], lty = 3, lwd = 2.5)
+lines(x_values, EDscore_p1 , col = colors[4], lty = 3, lwd = 2.5)
+
+# Add circles around the data points
+points(x_values, EDscore_p0.2, col = colors[1], pch = 16, cex = 1.5)  # Solid circles
+points(x_values, EDscore_p0.4 , col = colors[2], pch = 16, cex = 1.5)
+points(x_values, EDscore_p0.6 , col = colors[3], pch = 16, cex = 1.5)
+points(x_values, EDscore_p1 , col = colors[4], pch = 16, cex = 1.5)
+
+
+###Effect of the tail fraction on the score SMSE 
+n <- 50   #Replace p=0.2 by p=0.4 or p=0.6  4''
+list <- readRDS(file= paste0("C:/Users/mourahib/Desktop/github/Penalized_least-squares_estimator/Results/DA_mix_HR/effect_tail_fraction/N2000/pen1.rds"))
+#Calculus of EDS score. 
+SMSE_p1 <- rep(0 , 10)
+for( j in 1:10  ){
+  list_res <- list()
+  for(i in 1 : n){
+    list_res[[i]] <- list[[i]][[j]]
+  }
+  SMSE_p1[j] <- SMSE_HR2(list_res , A , Gamma = 1)
+}
+
+
+
+#############plot EDS
+colors <- c("#E69F00", "#56B4E9", "#009E73", "#D55E00")  # Orange, Blue, Green
+
+# X-axis values
+x_values <- seq(0.02 , 0.2 , by=0.02) 
+
+# Set up an empty plot with appropriate axis limits
+par(mgp = c(2, 0.7, 0))  # Adjust label position
+plot(x_values, SMSE_p0.2 , type = "l", col = colors[1], lty = 1, lwd = 2.5, 
+     ylim =  c(0 , 8), 
+     xlab = "tail fraction k/n",
+     ylab = "" , #  "ED-S", 
+     cex.lab = 1.5, cex.axis = 1.3, 
+     xaxt = "n")
+
+# Add custom x-axis ticks and labels
+axis(1, at = x_values, labels = x_values, cex.axis = 1.3)
+
+
+
+
+# Add lines for the other vectors
+lines(x_values, SMSE_p0.4 , col = colors[2], lty = 2, lwd = 2.5)
+lines(x_values, SMSE_p0.6 , col = colors[3], lty = 3, lwd = 2.5)
+lines(x_values, SMSE_p1 , col = colors[4], lty = 3, lwd = 2.5)
+
+# Add circles around the data points
+points(x_values, SMSE_p0.2, col = colors[1], pch = 16, cex = 1.5)  # Solid circles
+points(x_values, SMSE_p0.4 , col = colors[2], pch = 16, cex = 1.5)
+points(x_values, SMSE_p0.6 , col = colors[3], pch = 16, cex = 1.5)
+points(x_values, SMSE_p1 , col = colors[4], pch = 16, cex = 1.5)

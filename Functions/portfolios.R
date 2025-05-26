@@ -65,9 +65,9 @@ data <- eps_mat
 
 
 
-lambda_grid <- seq(0.01, 0.2 ,  by = 0.01)
+lambda_grid <- seq(0.00001, 0.0002 ,  by = 0.00001)
 p <- 0.4
-k <- nrow(X)/10
+k <- nrow(X)/20
 num_class <- 5  
 points_log <- c(0,1/3 , 1/2 , 2/3 ,1)
 Grid_points_log <- selectGrid(cst = points_log, d = d, nonzero  = c(1, 2,3) )
