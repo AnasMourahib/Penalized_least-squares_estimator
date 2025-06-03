@@ -295,6 +295,45 @@ SMSE_log <- function (list, A , dep){
   return(rmse) 
 }  
 
+
+SMSE_log_2 <- function (list, A , dep){
+  d <- nrow(A)
+  r <- ncol(A)
+  N <- length(list)
+  list_matrices <- list()
+  list_dep <- rep(0 , N)
+  for(i in 1: N){
+    list_matrices[[i]] <-  list[[i]]$matrix
+    r_diff_estim <-  r - ncol(list_matrices[[i]])
+    if(r_diff_estim > 0 ){
+      for(e in 1 : r_diff_estim){
+        list_matrices[[i]] <- cbind(list_matrices[[i]] , rep(0 , d)  ) 
+      } 
+    }
+    list_dep[i]  <- list[[i]]$dep
+  }
+  rmse <- 0
+  array_stack <- simplify2array(list_matrices)
+  max_matrix <- apply(array_stack, c(1, 2), max) 
+  max_matrix <- apply(max_matrix, c(1,2), f<-function(x) {
+    if(x==0)
+    {x <- 1}
+    return(x) } ) #Correct when sd=0. This case happens only when a true zero is estimated to 0 in all seeds 
+  max_dep_coeff <- max(list_dep)^2
+  dep_diff <- sum( ( list_dep - dep)^(2)  )  
+  
+  
+  
+  for( i in 1:N){
+    diff <-   as.vector( (list_matrices[[i]] - A)^2 )  / (N * max_matrix) 
+    rmse <- rmse + ( sum(diff)  )
+  }
+  rmse <- rmse + (r * dep_diff)/(N  * max_dep_coeff)  
+  return(rmse) 
+}  
+
+
+
 ext_coeff_HR <- function(Gamma){
   cdf1 <- pnorm(  Gamma/2 , sd= sqrt(Gamma) )
   cdf2 <- pnorm(  Gamma/2 , sd= sqrt(Gamma) ) 
@@ -308,8 +347,11 @@ matrix_ext <- function(mat){
   return(values)
 }
 
-matrix_vector <- function(mat){
+matrix_vector <- function(mat, ind = NULL){
   upper_values <- mat[upper.tri(mat, diag = FALSE)]
+  if(!is.null(ind)){
+    upper_values <- upper_values[-ind]
+  }
   return(upper_values)
 }
 
@@ -341,7 +383,7 @@ SMSE_HR <- function (list_matrices , A , Gamma  ){
     return(rmse)
 }
 
-SMSE_HR2 <- function (list_matrices , A , Gamma  ){
+SMSE_HR2 <- function (list_matrices , A , Gamma , ind = NULL  ){
   rmse <-  0 
   d <- nrow(A)
   r <- ncol(A)
@@ -358,8 +400,12 @@ SMSE_HR2 <- function (list_matrices , A , Gamma  ){
     if(x==0)
     {x <- 1}
     return(x) } ) #Correct when sd=0. This case happens only when a true zero is estimated to 0 in all seeds 
-  list_values <- lapply(list_pls_dep_matrices, matrix_vector)
-  max_vector <- do.call(pmax, list_values) 
+  interm_matrix_vector <- function(matrix){
+    res <- matrix_vector(matrix , ind)
+    return(res)
+  }
+  list_values <- lapply(list_pls_dep_matrices, interm_matrix_vector  )
+  max_vector <- (do.call(pmax, list_values) )^2
   true_value <- 1
   for( i in 1:N){
     diff1 <- sum( as.vector( (list_pls_matrices[[i]] - A)^2 )  / (N * max_matrix) ) 

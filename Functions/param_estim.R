@@ -17,7 +17,7 @@ param_estim <- function(d, r, A, grid, lambda, num_col = NULL, start, type = c("
       theta_alpha <- theta[l + 1]
       if (theta_alpha > 1) return(1e16)
       result <- .C(type, as.double(p), as.double(lambda), as.double(theta_A), as.integer(d),
-                   as.integer(num_col), as.integer(q), rep(theta_alpha, num_col), as.double(w),
+                   as.integer(num_col), as.integer(q), as.double(rep(theta_alpha, num_col)), as.double(w),
                    grid_flat, R = double(1))$R
     } else {
       theta_Gamma <- theta[(l + 1):(l + v)]

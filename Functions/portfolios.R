@@ -6,6 +6,7 @@ library(tailDepFun) # defining a grid
 library(ggplot2) # plotting
 library(tidyverse)
 library(vars)
+library(qrmtools)
 dyn.load("main.dll")
 source("Functions/Simulation_mixture_model.R")
 source("Functions/Starting_points.R")
@@ -16,60 +17,36 @@ source("Functions/main.R")
 source("Functions/main_applications.R")
 
 
+data <- read.csv("C:/Users/mourahib/Desktop/github/Penalized_least-squares_estimator/Data/5_Industry_Portfolios_Daily.csv",
+                 skip = 9,
+                 stringsAsFactors = FALSE)
 
 
 
-tmp <- read.csv("C:/Users/mourahib/Desktop/github/Graph-estimation/data/30_Industry_Portfolios_Daily.CSV", header= T, nrows = 24643)
-tmp$X <- as.Date(as.character(tmp$X), format = "%Y%m%d")
-indx <- which(tmp$X == "1970-01-02") # Could pick another date but check for missing values
-dates <- tmp$X[indx:length(tmp$X)]
-data <- as.matrix(-tmp[indx:nrow(tmp),2:ncol(tmp)])
-rownames(data) <- NULL
-colnames(data) <- NULL
+# Keep only the 5 return columns (drop date and row number)
+returns_matrix <- as.matrix(data[, 2:6])
+colnames(returns_matrix) <- NULL
+returns_matrix <- matrix(as.numeric(returns_matrix), nrow = nrow(returns_matrix), ncol = ncol(returns_matrix))
+returns_matrix <- returns_matrix[ -c(25962 , 25963 , 51925) ,]
+log_returns <-  log((returns_matrix/100) + 1 )
+data <- - log_returns
+
+eps_list <- lapply(1:ncol(data), function(i) {
+  gfit <- fit_GARCH_11(data[, i])
+  gfit$Z.t
+})
+eps_matrix <- do.call(cbind, eps_list)
+
+
+data <- eps_matrix
 
 
 
-
-##Decluster data using an AR(p) model with p chosen using an AIC criterion 
-## assume your data are in a matrix 'data' of dimension T × d
-# assume your data are in a matrix 'data' of dimension T × d
-data <- data[, c(1 , 2 ,3 , 4 , 5) ] ##we take only 8 portfolios
-
-
-
-# Suppose your data are in a T×30 matrix called `data`
-
-# 1) Use VARselect() to pick p by AIC
-#    lag.max = 10 means we’ll consider p = 1..10
-sel <- VARselect(data, lag.max = 10, type = "const")
-p_aic <- sel$selection["AIC(n)"]
-cat("VAR order by AIC:", p_aic, "\n")
-
-# 2) Fit the VAR(p) with that lag
-mod_var <- VAR(data, p = p_aic, type = "const")
-
-# 3) Extract the residuals: this is a (T - p_aic) × 30 matrix
-eps_mat <- residuals(mod_var)
-
-acf(
-  eps_mat[, 1],
-  main = paste0("ACF of VAR(", p_aic, ") residuals,\nseries 1"),
-  ylim = c(-1, 1)
-)
-Box.test(eps_mat[, 1], lag = 10, type = "Ljung-Box")
-
-
-##############Fit the forest 
-
-data <- eps_mat
-
-
-
-lambda_grid <- seq(0.00001, 0.0002 ,  by = 0.00001)
-p <- 0.4
+lambda_grid <- seq(0.001, 0.02 ,  by = 0.001)
+p <- 1
 k <- nrow(X)/20
 num_class <- 5  
-points_log <- c(0,1/3 , 1/2 , 2/3 ,1)
+points_log <- c(0,1/3  , 2/3 ,1)
 Grid_points_log <- selectGrid(cst = points_log, d = d, nonzero  = c(1, 2,3) )
 
 cl <- makeCluster(6)
