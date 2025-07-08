@@ -23,13 +23,16 @@ data <- read.csv("C:/Users/mourahib/Desktop/github/Penalized_least-squares_estim
 
 
 
-# Keep only the 5 return columns (drop date and row number)
+# Keep only the 10 return columns (drop date and row number)
 returns_matrix <- as.matrix(data[, 2:11])
 colnames(returns_matrix) <- NULL
 returns_matrix <- matrix(as.numeric(returns_matrix), nrow = nrow(returns_matrix), ncol = ncol(returns_matrix))
-returns_matrix <- returns_matrix[ -c(25981 ,  25982 , 51964) ,]
+bad_rows <- which(!complete.cases(mydata))   # positions of rows with NA or NaN
+returns_matrix <- returns_matrix[ -bad_rows ,]
 log_returns <-  log((returns_matrix/100) + 1 )
 data <- - log_returns
+
+#We fit a GARCH(1,1) model to each margin as in Equation (5.4) and extract the residuals to remove time dependency 
 
 eps_list <- lapply(1:ncol(data), function(i) {
   gfit <- fit_GARCH_11(data[, i])
