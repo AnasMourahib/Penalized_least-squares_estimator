@@ -26,6 +26,7 @@ X <- danube$data_clustered[ , c(7 , 18 , 24 , 27 , 30) ]
 X <- as.matrix(X)
 rownames(X) <- NULL
 colnames(X) <- NULL
+
 d <- ncol(X)
 
 

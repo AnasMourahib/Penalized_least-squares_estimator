@@ -43,6 +43,7 @@ eps_matrix <- do.call(cbind, eps_list)
 
 data <- eps_matrix
 
+
 d <- ncol(data)
 ###For p= 0.4, change lambda_grid to : seq(0.001, 0.02 ,  by = 0.002)
 lambda_grid <- seq(0.035, 0.055 ,  by = 0.002)

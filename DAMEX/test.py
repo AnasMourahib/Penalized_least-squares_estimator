@@ -14,7 +14,8 @@ from Functions import damex
 
 
 
-df_danube = pd.read_csv("C:/Users/mourahib/Desktop/github/Estimation-mixture-model/DAMEX/Danube4.csv")
+df_danube = pd.read_csv("DAMEX/data_Danube.csv")
+#For the portflolios data, replace the file_path with the file data_portfolios
 print(df_danube)
 
 
@@ -30,5 +31,5 @@ R_danube=np.min(np.max(x_extr_0_danube , axis=1 ) )-1
 eps_dmx = 0.0005
 mu_min = 0.0001
 alphas_0_danube, mass_danube = damex(x_extr_0_danube, R_danube, eps_dmx, mu_min=mu_min)
-print("With threshold", mu_min, "the extreme directions resulting from stations {1 , 2 , 11 , 12}", alphas_0_danube , "with mass" , mass_danube)
+print("With threshold", mu_min, "the extreme directions resulting from stations {7 , 18 , 24 , 27, 30}", alphas_0_danube , "with mass" , mass_danube)
 
