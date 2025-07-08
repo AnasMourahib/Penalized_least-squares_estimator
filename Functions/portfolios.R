@@ -41,8 +41,8 @@ eps_matrix <- do.call(cbind, eps_list)
 data <- eps_matrix
 
 d <- ncol(data)
-
-lambda_grid <- seq(0.001, 0.02 ,  by = 0.002)
+###For p= 0.4, change lambda_grid to : seq(0.001, 0.02 ,  by = 0.002)
+lambda_grid <- seq(0.035, 0.055 ,  by = 0.002)
 p <- 0.6
 k <- nrow(X)/20
 num_class <- 5  
@@ -65,4 +65,27 @@ set.seed(123)
 
 res0.6 <- main_oversteps_application( data = data , lambda_grid , grid = Grid_points_log,  start = NULL , 
                                       type = "SSR_row_log", k, p, num_class , cl )
-#saveRDS(res0.4, file = "C:/Users/mourahib/Desktop/github/Penalized_least-squares_estimator/Results/application/portfolios10res0.4.rds")
+saveRDS(res0.6, file = "C:/Users/mourahib/Desktop/github/Penalized_least-squares_estimator/Results/application/portfolios10res0.6.rds")
+
+########### Extracting the results 
+
+
+res <- readRDS(file = "C:/Users/mourahib/Desktop/github/Penalized_least-squares_estimator/Results/application/portfolios10res0.4.rds")
+#mat is the estimated matrix and coeff the estimated dependence coefficient for the mixture logistic model 
+mat <- res$Estimation$matrix
+coeff <- res$Estimation$dep
+#extreme directions is a list of the resulting extreme directions
+extreme_directions <- list()
+for(i in 1 : ncol(mat))
+{
+  extreme_directions[[i]] <- which(mat[,i] >0  )
+}
+lextreme_direction <- length(extreme_directions)
+#We calcualte the weight of each extreme direction as in Equation~(5.2) from the paper  
+f <- function(vec){
+  sum( vec  )^(coeff)
+}
+mat_pow <- mat^(1/coeff)
+pre_weights <- apply(mat_pow , 2 , f   )
+mass_tot <-  sum( pre_weights ) 
+weights <-  pre_weights / mass_tot

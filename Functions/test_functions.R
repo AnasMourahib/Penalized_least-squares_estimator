@@ -80,32 +80,35 @@ for(i in 1 : 1){
 
 
 #############Transform data 
-n <- 50
+n <- 100
 list <- list() 
-for(i in 1: n){         
-  file_path <- paste0("C:/Users/mourahib/Desktop/github/Penalized_least-squares_estimator/Results/DA_mix_log/effect_tail_fraction/N10000/pen1/result_",i,".rds")
+count <- 0 
+for(i in 1: n){          
+  file_path <- paste0("C:/Users/mourahib/Desktop/github/Penalized_least-squares_estimator/Results/DA_mix_HR/extr_dir_ident/wrong_model/kn0.08/result_",i,".rds")
   if(file.exists(file_path)){
+    count <- count + 1
     result <- readRDS(file_path)
-    list[[i]] <- result 
+    list[[count]] <- result 
   }
   else(print(i))
 }
-saveRDS(list , file= "C:/Users/mourahib/Desktop/github/Penalized_least-squares_estimator/Results/DA_mix_log/effect_tail_fraction/N10000/pen0.4.rds" )
+saveRDS(list , file= "C:/Users/mourahib/Desktop/github/Penalized_least-squares_estimator/Results/DA_mix_HR/extr_dir_ident/wrong_model/kn0.08.rds" )
 
 
 
 
 ###Effect of the tail fraction on teh score EDS      
-n <- 100  #Replace p=0.2 by p=0.4 or p=0.6  4''
+n <- 100   #Replace p=0.2 by p=0.4 or p=0.6  4''
 list <- readRDS(file= paste0("C:/Users/mourahib/Desktop/github/Penalized_least-squares_estimator/Results/DA_mix_log/effect_tail_fraction/N3000/pen0.2.rds"))
+list[[1]] <- list[[2]]
 #Calculus of EDS score. 
-EDscore_N3 <- rep(0 , 10)
+EDscore_p0.2 <- rep(0 , 10)
 for( j in 1:10  ){
   list_matrices <- list()  
   for(i in 1: n){
     list_matrices <- list[[i]][[j]]$Estimation$matrix
     scorei <- EDS( list_matrices , A)
-    EDscore_N3[j] <- EDscore_N3[j] + scorei/n
+    EDscore_p0.2[j] <- EDscore_p0.2[j] + scorei/n
   }
 }
 
@@ -118,10 +121,10 @@ x_values <- seq(0.02 , 0.2 , by=0.02)
 
 # Set up an empty plot with appropriate axis limits
 par(mgp = c(2, 0.7, 0))  # Adjust label position
-plot(x_values, EDscore_N1 , type = "l", col = colors[1], lty = 1, lwd = 2.5, 
-     ylim =  c(0 , 0.6), 
-     xlab =  "tail fraction k/n",
-      ylab = "ED-S" , #  "ED-S", 
+plot(x_values, EDscore_p0.2 , type = "l", col = colors[1], lty = 1, lwd = 2.5, 
+     ylim =  c(0.5 , 1), 
+     xlab = "",
+      ylab = "" , #  "ED-S", 
      cex.lab = 1.5, cex.axis = 1.3, 
      xaxt = "n")
 
@@ -132,27 +135,30 @@ axis(1, at = x_values, labels = x_values, cex.axis = 1.3)
 
 
 # Add lines for the other vectors
-lines(x_values, EDscore_N2 , col = colors[2], lty = 1, lwd = 2.5)
-lines(x_values, EDscore_N3 , col = colors[3], lty = 1, lwd = 2.5)
+lines(x_values, EDscore_p0.4 , col = colors[2], lty = 2, lwd = 2.5)
+lines(x_values, EDscore_p0.6 , col = colors[3], lty = 3, lwd = 2.5)
+lines(x_values, EDscore_p1 , col = colors[4], lty = 3, lwd = 2.5)
 
 # Add circles around the data points
-points(x_values, EDscore_N1, col = colors[1], pch = 16, cex = 1.5)  # Solid circles
-points(x_values, EDscore_N2 , col = colors[2], pch = 16, cex = 1.5)
-points(x_values, EDscore_N3 , col = colors[3], pch = 16, cex = 1.5)
-
+points(x_values, EDscore_p0.2, col = colors[1], pch = 16, cex = 1.5)  # Solid circles
+points(x_values, EDscore_p0.4 , col = colors[2], pch = 16, cex = 1.5)
+points(x_values, EDscore_p0.6 , col = colors[3], pch = 16, cex = 1.5)
+points(x_values, EDscore_p1 , col = colors[4], pch = 16, cex = 1.5)
 
 
 ###Effect of the tail fraction on the score SMSE 
-n <- 50   #Replace p=0.2 by p=0.4 or p=0.6  4''
-list <- readRDS(file= paste0("C:/Users/mourahib/Desktop/github/Penalized_least-squares_estimator/Results/DA_mix_HR/effect_tail_fraction/N3000/pen0.4.rds"))
+n <- 100   #Replace p=0.2 by p=0.4 or p=0.6  4
+list <- readRDS(file= paste0("C:/Users/mourahib/Desktop/github/Penalized_least-squares_estimator/Results/DA_mix_log/effect_tail_fraction/N3000/pen1.rds"))
+list[[1]] <- list[[2]]
 #Calculus of EDS score. 
-SMSE_N3 <- rep(0 , 10)
+list_res <- list()
+SMSE_p1 <- rep(0 , 10)
 for( j in 1:10  ){
   list_res <- list()
   for(i in 1 : n){
-    list_res[[i]] <- list[[i]][[j]]
+    list_res[[i]] <- list[[i]][[j]]$Estimation
   }
-  SMSE_N3[j] <-  SMSE_HR2 (list_res , A , ind = 3  ) # SMSE_log_2 (list_res , A , dep = 0.25)   #  
+  SMSE_p1[j] <- SMSE_log_2(list_res , A , dep = 0.25)
 }
 
 
@@ -165,10 +171,10 @@ x_values <- seq(0.02 , 0.2 , by=0.02)
 
 # Set up an empty plot with appropriate axis limits
 par(mgp = c(2, 0.7, 0))  # Adjust label position
-plot(x_values, SMSE_N1 , type = "l", col = colors[1], lty = 1, lwd = 2.5, 
-     ylim =  c(0 , 5), 
+plot(x_values, SMSE_p0.2 , type = "l", col = colors[1], lty = 1, lwd = 2.5, 
+     ylim =  c(0 , 4), 
      xlab = "tail fraction k/n",
-     ylab = "SMSE" , #  "ED-S", 
+     ylab = "" , #  "ED-S", 
      cex.lab = 1.5, cex.axis = 1.3, 
      xaxt = "n")
 
@@ -179,14 +185,15 @@ axis(1, at = x_values, labels = x_values, cex.axis = 1.3)
 
 
 # Add lines for the other vectors
-lines(x_values, SMSE_N2 , col = colors[2], lty = 1, lwd = 2.5)
-lines(x_values, SMSE_N3 , col = colors[3], lty = 1, lwd = 2.5)
+lines(x_values, SMSE_p0.4 , col = colors[2], lty = 2, lwd = 2.5)
+lines(x_values, SMSE_p0.6 , col = colors[3], lty = 3, lwd = 2.5)
+lines(x_values, SMSE_p1 , col = colors[4], lty = 3, lwd = 2.5)
 
 # Add circles around the data points
-points(x_values, SMSE_N1, col = colors[1], pch = 16, cex = 1.5)  # Solid circles
-points(x_values, SMSE_N2 , col = colors[2], pch = 16, cex = 1.5)
-points(x_values, SMSE_N3 , col = colors[3], pch = 16, cex = 1.5)
-
+points(x_values, SMSE_p0.2, col = colors[1], pch = 16, cex = 1.5)  # Solid circles
+points(x_values, SMSE_p0.4 , col = colors[2], pch = 16, cex = 1.5)
+points(x_values, SMSE_p0.6 , col = colors[3], pch = 16, cex = 1.5)
+points(x_values, SMSE_p1 , col = colors[4], pch = 16, cex = 1.5)
 
 
 
@@ -196,7 +203,7 @@ points(x_values, SMSE_N3 , col = colors[3], pch = 16, cex = 1.5)
 
 
 
-############################Extreme direction identification 
+############################Ectreme direction identification 
 
 n <- 100
 count <- 0 
@@ -227,18 +234,18 @@ for(i in 1 : n){
 
 
 
-list <- readRDS(file= paste0("C:/Users/mourahib/Desktop/github/Estimation-mixture-model/Results/extreme_dir_iden/kn0.08.rds"))
-n <- 100
+list <- readRDS(file= paste0("C:/Users/mourahib/Desktop/github/Penalized_least-squares_estimator/Results/DA_mix_HR/extr_dir_ident/wrong_model/kn0.08.rds"))
+n <- 95
 
-EDscore_kn0.082 <- rep(0  , 10)
+EDscore_kn0.08 <- rep(0  , 10)
 for( j in 1:10  ){
   list_matrices <- list()
   for(i in 1: n){
     if(is.null(list[[i]]) == FALSE){
-      list_matrices[[i]] <- list[[i]][[j]]$Estimation$matrix
+      list_matrices[[i]] <- list[[i]][[j]]$Estimation$pls_matrix
       scorei <- EDS( list_matrices[[i]] , A)
       if(scorei>1){print(3)}
-      EDscore_kn0.082[j] <- EDscore_kn0.082[j] + scorei/n 
+      EDscore_kn0.08[j] <- EDscore_kn0.08[j] + scorei/n 
     }
     else(print(i))
   }
@@ -252,10 +259,10 @@ x_values <- seq(500 , 5000 , by = 500)
 
 # Set up an empty plot with appropriate axis limits
 par(mgp = c(2, 0.7, 0))  # Adjust label position
-plot(x_values, EDscore_kn0.08 , type = "l", col = colors[1], lty = 1, lwd = 2.5, 
-     ylim =  c(0 , 0.2), 
-     xlab =  "sample size n" , 
-     ylab = "ED-S", 
+plot(x_values, EDscore_kn0.04 , type = "l", col = colors[1], lty = 1, lwd = 2.5, 
+     ylim =  c(0.6 , 1), 
+     xlab =  "n" , 
+     ylab = "", 
      cex.lab = 1.5, cex.axis = 1.3, 
      xaxt = "n")
 
@@ -266,12 +273,90 @@ axis(1, at = x_values, labels = x_values, cex.axis = 1.3)
 
 
 # Add lines for the other vectors
-lines(x_values, EDscore_kn0.082 , col = colors[2], lty = 1, lwd = 2.5)
-#lines(x_values, EDscore_kn0.08, col = colors[3], lty = 1, lwd = 2.5)
+lines(x_values, EDscore_kn0.06 , col = colors[2], lty = 2, lwd = 2.5)
+lines(x_values, EDscore_kn0.08, col = colors[3], lty = 3, lwd = 2.5)
 
 # Add circles around the data points
-points(x_values, EDscore_kn0.08, col = colors[1], pch = 16, cex = 1.5)  # Solid circles
-points(x_values, EDscore_kn0.082 , col = colors[2], pch = 16, cex = 1.5)
+points(x_values, EDscore_kn0.04, col = colors[1], pch = 16, cex = 1.5)  # Solid circles
+points(x_values, EDscore_kn0.06 , col = colors[2], pch = 16, cex = 1.5)
 points(x_values, EDscore_kn0.08 , col = colors[3], pch = 16, cex = 1.5)
 
 
+
+
+list <- readRDS(file= paste0("C:/Users/mourahib/Desktop/github/Penalized_least-squares_estimator/Results/DA_mix_HR/effect_tail_fraction/N3000/pen0.2.rds"))
+j <- 3
+n <- 50
+list_mat <- list()
+for(i in 1 : n){
+  list_mat[[i]] <- list[[i]][[j]]$Estimation$pls_dep
+}
+
+list_vec <- lapply(list_mat , matrix_vector )
+
+my_list_trimmed <- lapply(list_vec <- lapply(list_mat , matrix_vector )
+, function(x) x[-3])
+
+# Step 2: Convert to a matrix (rows = observations, columns = remaining elements)
+mat <- do.call(rbind, my_list_trimmed)
+
+# Step 3: Define Greek-style labels using expression()
+labels <- expression(Gamma[12], Gamma[13], Gamma[14], Gamma[24], Gamma[34])
+
+# Step 4: Plot
+bp <- boxplot(mat,
+        main = "Sample size N = 3000",
+        xlab = "Elements",
+        ylab = "Values",
+        names = labels, 
+        ylim= c(0,5))
+for (i in 1:length(bp$names)) {
+  # You can tweak the width (here: 0.3 on each side of the box center)
+  segments(x0 = i - 0.4, x1 = i + 0.4, y0 = 1, y1 = 1, col = "red", lty = 1, lwd = 2)
+}
+
+
+###########Effect of the penaliation exponent 
+
+#Calculus of SMSE2 score
+list <- readRDS(file= paste0("C:/Users/mourahib/Desktop/github/Penalized_least-squares_estimator/Results/DA_mix_log/effect_alpha/N3000/kn0.6.rds"))
+list_estim <- list()
+SMSE_kn0.6 <- rep(0 , 10)
+for(j in 1 : 10){
+  for( i in 1: n){
+    list_estim[[i]] <- list[[i]][[j]]$Estimation
+  }
+  SMSE_kn0.6[j] <- SMSE_log_2(list_estim , A , dep = alpha )
+}
+
+#####plot SMSE
+
+colors <- c("#E69F00", "#56B4E9", "#009E73")  # Orange, Blue, Green
+
+# X-axis values
+x_values <- seq(0.1 , 1 , by=0.1) 
+
+# Set up an empty plot with appropriate axis limits
+par(mgp = c(2, 0.7, 0))  # Adjust label position
+plot(x_values, SMSE_kn0.4 , type = "l", col = colors[1], lty = 1, lwd = 2.5, 
+     ylim =  c(0 , 1.2),    
+     xlab = expression(p)
+     , ylab = "" #"SMSE"
+     , 
+     cex.lab = 1.5, cex.axis = 1.3, 
+     xaxt = "n")
+
+# Add custom x-axis ticks and labels
+axis(1, at = x_values, labels = x_values, cex.axis = 1.3)
+
+
+
+
+# Add lines for the other vectors
+lines(x_values, SMSE_kn0.5 , col = colors[2], lty = 2, lwd = 2.5)
+lines(x_values, SMSE_kn0.6 , col = colors[3], lty = 3, lwd = 2.5)
+
+# Add circles around the data points
+points(x_values, SMSE_kn0.4 , col = colors[1], pch = 16, cex = 1.5)  # Solid circles
+points(x_values, SMSE_kn0.5 , col = colors[2], pch = 16, cex = 1.5)
+points(x_values, SMSE_kn0.6 , col = colors[3], pch = 16, cex = 1.5)
