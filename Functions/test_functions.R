@@ -83,29 +83,29 @@ for(i in 1 : 1){
 n <- 50
 list <- list() 
 for(i in 1: n){         
-  file_path <- paste0("C:/Users/mourahib/Desktop/github/Penalized_least-squares_estimator/Results/DA_mix_HR/effect_tail_fraction/N10000/pen1/result_",i,".rds")
+  file_path <- paste0("C:/Users/mourahib/Desktop/github/Penalized_least-squares_estimator/Results/DA_mix_log/effect_tail_fraction/N10000/pen1/result_",i,".rds")
   if(file.exists(file_path)){
     result <- readRDS(file_path)
     list[[i]] <- result 
   }
   else(print(i))
 }
-saveRDS(list , file= "C:/Users/mourahib/Desktop/github/Penalized_least-squares_estimator/Results/DA_mix_HR/effect_tail_fraction/N10000/pen1.rds" )
+saveRDS(list , file= "C:/Users/mourahib/Desktop/github/Penalized_least-squares_estimator/Results/DA_mix_log/effect_tail_fraction/N10000/pen0.4.rds" )
 
 
 
 
 ###Effect of the tail fraction on teh score EDS      
-n <- 50   #Replace p=0.2 by p=0.4 or p=0.6  4''
-list <- readRDS(file= paste0("C:/Users/mourahib/Desktop/github/Penalized_least-squares_estimator/Results/DA_mix_HR/effect_tail_fraction/N10000/pen1.rds"))
+n <- 100  #Replace p=0.2 by p=0.4 or p=0.6  4''
+list <- readRDS(file= paste0("C:/Users/mourahib/Desktop/github/Penalized_least-squares_estimator/Results/DA_mix_log/effect_tail_fraction/N3000/pen0.2.rds"))
 #Calculus of EDS score. 
-EDscore_p1 <- rep(0 , 10)
+EDscore_N3 <- rep(0 , 10)
 for( j in 1:10  ){
   list_matrices <- list()  
   for(i in 1: n){
-    list_matrices <- list[[i]][[j]]$Estimation$pls_matrix
+    list_matrices <- list[[i]][[j]]$Estimation$matrix
     scorei <- EDS( list_matrices , A)
-    EDscore_p1[j] <- EDscore_p1[j] + scorei/n
+    EDscore_N3[j] <- EDscore_N3[j] + scorei/n
   }
 }
 
@@ -118,9 +118,9 @@ x_values <- seq(0.02 , 0.2 , by=0.02)
 
 # Set up an empty plot with appropriate axis limits
 par(mgp = c(2, 0.7, 0))  # Adjust label position
-plot(x_values, EDscore_p0.2 , type = "l", col = colors[1], lty = 1, lwd = 2.5, 
-     ylim =  c(0.5 , 1), 
-     xlab = "taik fraction k/n",
+plot(x_values, EDscore_N1 , type = "l", col = colors[1], lty = 1, lwd = 2.5, 
+     ylim =  c(0 , 0.6), 
+     xlab =  "tail fraction k/n",
       ylab = "ED-S" , #  "ED-S", 
      cex.lab = 1.5, cex.axis = 1.3, 
      xaxt = "n")
@@ -132,28 +132,27 @@ axis(1, at = x_values, labels = x_values, cex.axis = 1.3)
 
 
 # Add lines for the other vectors
-lines(x_values, EDscore_p0.4 , col = colors[2], lty = 2, lwd = 2.5)
-lines(x_values, EDscore_p0.6 , col = colors[3], lty = 3, lwd = 2.5)
-lines(x_values, EDscore_p1 , col = colors[4], lty = 3, lwd = 2.5)
+lines(x_values, EDscore_N2 , col = colors[2], lty = 1, lwd = 2.5)
+lines(x_values, EDscore_N3 , col = colors[3], lty = 1, lwd = 2.5)
 
 # Add circles around the data points
-points(x_values, EDscore_p0.2, col = colors[1], pch = 16, cex = 1.5)  # Solid circles
-points(x_values, EDscore_p0.4 , col = colors[2], pch = 16, cex = 1.5)
-points(x_values, EDscore_p0.6 , col = colors[3], pch = 16, cex = 1.5)
-points(x_values, EDscore_p1 , col = colors[4], pch = 16, cex = 1.5)
+points(x_values, EDscore_N1, col = colors[1], pch = 16, cex = 1.5)  # Solid circles
+points(x_values, EDscore_N2 , col = colors[2], pch = 16, cex = 1.5)
+points(x_values, EDscore_N3 , col = colors[3], pch = 16, cex = 1.5)
+
 
 
 ###Effect of the tail fraction on the score SMSE 
 n <- 50   #Replace p=0.2 by p=0.4 or p=0.6  4''
-list <- readRDS(file= paste0("C:/Users/mourahib/Desktop/github/Penalized_least-squares_estimator/Results/DA_mix_HR/effect_tail_fraction/N1000/pen1.rds"))
+list <- readRDS(file= paste0("C:/Users/mourahib/Desktop/github/Penalized_least-squares_estimator/Results/DA_mix_HR/effect_tail_fraction/N3000/pen0.4.rds"))
 #Calculus of EDS score. 
-SMSE_p1 <- rep(0 , 10)
+SMSE_N3 <- rep(0 , 10)
 for( j in 1:10  ){
   list_res <- list()
   for(i in 1 : n){
     list_res[[i]] <- list[[i]][[j]]
   }
-  SMSE_p1[j] <- SMSE_HR2(list_res , A , Gamma = 1 , ind = 3)
+  SMSE_N3[j] <-  SMSE_HR2 (list_res , A , ind = 3  ) # SMSE_log_2 (list_res , A , dep = 0.25)   #  
 }
 
 
@@ -166,8 +165,8 @@ x_values <- seq(0.02 , 0.2 , by=0.02)
 
 # Set up an empty plot with appropriate axis limits
 par(mgp = c(2, 0.7, 0))  # Adjust label position
-plot(x_values, SMSE_p0.2 , type = "l", col = colors[1], lty = 1, lwd = 2.5, 
-     ylim =  c(0 , 5.5), 
+plot(x_values, SMSE_N1 , type = "l", col = colors[1], lty = 1, lwd = 2.5, 
+     ylim =  c(0 , 5), 
      xlab = "tail fraction k/n",
      ylab = "SMSE" , #  "ED-S", 
      cex.lab = 1.5, cex.axis = 1.3, 
@@ -180,15 +179,14 @@ axis(1, at = x_values, labels = x_values, cex.axis = 1.3)
 
 
 # Add lines for the other vectors
-lines(x_values, SMSE_p0.4 , col = colors[2], lty = 2, lwd = 2.5)
-lines(x_values, SMSE_p0.6 , col = colors[3], lty = 3, lwd = 2.5)
-lines(x_values, SMSE_p1 , col = colors[4], lty = 3, lwd = 2.5)
+lines(x_values, SMSE_N2 , col = colors[2], lty = 1, lwd = 2.5)
+lines(x_values, SMSE_N3 , col = colors[3], lty = 1, lwd = 2.5)
 
 # Add circles around the data points
-points(x_values, SMSE_p0.2, col = colors[1], pch = 16, cex = 1.5)  # Solid circles
-points(x_values, SMSE_p0.4 , col = colors[2], pch = 16, cex = 1.5)
-points(x_values, SMSE_p0.6 , col = colors[3], pch = 16, cex = 1.5)
-points(x_values, SMSE_p1 , col = colors[4], pch = 16, cex = 1.5)
+points(x_values, SMSE_N1, col = colors[1], pch = 16, cex = 1.5)  # Solid circles
+points(x_values, SMSE_N2 , col = colors[2], pch = 16, cex = 1.5)
+points(x_values, SMSE_N3 , col = colors[3], pch = 16, cex = 1.5)
+
 
 
 
@@ -198,7 +196,7 @@ points(x_values, SMSE_p1 , col = colors[4], pch = 16, cex = 1.5)
 
 
 
-############################Ectreme direction identification 
+############################Extreme direction identification 
 
 n <- 100
 count <- 0 
@@ -229,18 +227,18 @@ for(i in 1 : n){
 
 
 
-list <- readRDS(file= paste0("C:/Users/mourahib/Desktop/github/Penalized_least-squares_estimator/Results/DA_mix_HR/extr_dir_ident/kn0.08.rds"))
-n <- 82
+list <- readRDS(file= paste0("C:/Users/mourahib/Desktop/github/Estimation-mixture-model/Results/extreme_dir_iden/kn0.08.rds"))
+n <- 100
 
-EDscore_kn0.08 <- rep(0  , 10)
+EDscore_kn0.082 <- rep(0  , 10)
 for( j in 1:10  ){
   list_matrices <- list()
   for(i in 1: n){
     if(is.null(list[[i]]) == FALSE){
-      list_matrices[[i]] <- list[[i]][[j]]$Estimation$pls_matrix
+      list_matrices[[i]] <- list[[i]][[j]]$Estimation$matrix
       scorei <- EDS( list_matrices[[i]] , A)
       if(scorei>1){print(3)}
-      EDscore_kn0.08[j] <- EDscore_kn0.08[j] + scorei/n 
+      EDscore_kn0.082[j] <- EDscore_kn0.082[j] + scorei/n 
     }
     else(print(i))
   }
@@ -254,9 +252,9 @@ x_values <- seq(500 , 5000 , by = 500)
 
 # Set up an empty plot with appropriate axis limits
 par(mgp = c(2, 0.7, 0))  # Adjust label position
-plot(x_values, EDscore_kn0.04 , type = "l", col = colors[1], lty = 1, lwd = 2.5, 
-     ylim =  c(0.6 , 1), 
-     xlab =  "n" , 
+plot(x_values, EDscore_kn0.08 , type = "l", col = colors[1], lty = 1, lwd = 2.5, 
+     ylim =  c(0 , 0.2), 
+     xlab =  "sample size n" , 
      ylab = "ED-S", 
      cex.lab = 1.5, cex.axis = 1.3, 
      xaxt = "n")
@@ -268,12 +266,12 @@ axis(1, at = x_values, labels = x_values, cex.axis = 1.3)
 
 
 # Add lines for the other vectors
-lines(x_values, EDscore_kn0.06 , col = colors[2], lty = 2, lwd = 2.5)
-lines(x_values, EDscore_kn0.08, col = colors[3], lty = 3, lwd = 2.5)
+lines(x_values, EDscore_kn0.082 , col = colors[2], lty = 1, lwd = 2.5)
+#lines(x_values, EDscore_kn0.08, col = colors[3], lty = 1, lwd = 2.5)
 
 # Add circles around the data points
-points(x_values, EDscore_kn0.04, col = colors[1], pch = 16, cex = 1.5)  # Solid circles
-points(x_values, EDscore_kn0.06 , col = colors[2], pch = 16, cex = 1.5)
+points(x_values, EDscore_kn0.08, col = colors[1], pch = 16, cex = 1.5)  # Solid circles
+points(x_values, EDscore_kn0.082 , col = colors[2], pch = 16, cex = 1.5)
 points(x_values, EDscore_kn0.08 , col = colors[3], pch = 16, cex = 1.5)
 
 

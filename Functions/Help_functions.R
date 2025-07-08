@@ -5,7 +5,7 @@ shuffleCols <- function(start, A){
   r <- ncol(A)
   k <- ncol(start)
   perms <- permutations(n = k, r = r)
-  temp <- apply(perms, 1, function(j) sum(abs(start[,j] - A)))
+  temp <- apply(perms, 1, function(j) sum( (start[,j] - A)^(2)  ))
   indx <- which(temp == min(temp))
   firstcols <- perms[indx,]
   lastcols <- setdiff(c(1:k),firstcols)
@@ -253,7 +253,7 @@ ext_coeff_HR <- function(Gamma){
 EDS <- function(B, A){
   sig_A <- apply(A, 2,  function(vec)   which(vec>0) )
   sig_B <- apply(B, 2, function(vec)   which(vec>0) , simplify = FALSE )
-  return( length(intersect(sig_A , sig_B)) / max(length(sig_A) , length(sig_B))    )
+  return( 1 -   (   length(intersect(sig_A , sig_B)) / length(union(sig_A , sig_B))   )      )
 }
 
 
@@ -303,14 +303,14 @@ SMSE_log_2 <- function (list, A , dep){
   list_matrices <- list()
   list_dep <- rep(0 , N)
   for(i in 1: N){
-    list_matrices[[i]] <-  list[[i]]$matrix
+    list_matrices[[i]] <-  list[[i]]$Estimation$matrix
     r_diff_estim <-  r - ncol(list_matrices[[i]])
     if(r_diff_estim > 0 ){
       for(e in 1 : r_diff_estim){
         list_matrices[[i]] <- cbind(list_matrices[[i]] , rep(0 , d)  ) 
       } 
     }
-    list_dep[i]  <- list[[i]]$dep
+    list_dep[i]  <- list[[i]]$Estimation$dep
   }
   rmse <- 0
   array_stack <- simplify2array(list_matrices)
@@ -383,7 +383,7 @@ SMSE_HR <- function (list_matrices , A , Gamma  ){
     return(rmse)
 }
 
-SMSE_HR2 <- function (list_matrices , A , Gamma , ind = NULL  ){
+SMSE_HR2 <- function (list_matrices , A , ind = NULL  ){
   rmse <-  0 
   d <- nrow(A)
   r <- ncol(A)
