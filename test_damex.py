@@ -2,19 +2,19 @@
 
 # Import some files and libraries 
 import sys
-sys.path.insert(1, 'C:/Users/mourahib/Desktop/github/Estimation-mixture-model/DAMEX')
+sys.path.insert(1, 'Penalized_least-squares_estimator/extern/DAMEX')
 
-import Functions
+import damex_algo
 import extreme_data 
 import pandas as pd
 import numpy as np
 import sys
 from extreme_data import rank_transformation
-from Functions import damex
+from damex_algo import damex
 
 
 
-df_danube = pd.read_csv("DAMEX/data_Danube.csv")
+df_danube = pd.read_csv("Penalized_least-squares_estimator/Data/data_Danube.csv")
 #For the portflolios data, replace the file_path with the file data_portfolios
 print(df_danube)
 
