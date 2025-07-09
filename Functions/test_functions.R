@@ -360,3 +360,79 @@ lines(x_values, SMSE_kn0.6 , col = colors[3], lty = 3, lwd = 2.5)
 points(x_values, SMSE_kn0.4 , col = colors[1], pch = 16, cex = 1.5)  # Solid circles
 points(x_values, SMSE_kn0.5 , col = colors[2], pch = 16, cex = 1.5)
 points(x_values, SMSE_kn0.6 , col = colors[3], pch = 16, cex = 1.5)
+
+
+
+
+
+
+
+
+############################################################
+##  3‑variate sample with mixed signs of dependence
+##  X1–X3  positive   |   X1–X2, X2–X3  negative
+############################################################
+
+# install.packages("copula")   # run once if not installed
+library(copula)
+
+set.seed(42)                  # reproducibility
+n <- 5000                     # sample size (rows of output)
+
+## 1.  Build a correlation matrix with the required signs
+rho12 <- -0.40   # ρ(X1,X2)  < 0
+rho13 <-  0.60   # ρ(X1,X3)  > 0
+rho23 <- -0.40   # ρ(X2,X3)  < 0
+
+R <- matrix(c( 1 ,  rho12, rho13,
+               rho12, 1   , rho23,
+               rho13, rho23, 1   ), nrow = 3, byrow = TRUE)
+
+# Check positive‑definiteness (should be TRUE)
+eigen(R)$values > 0        # all TRUE?  good!
+
+## 2.  Define the Gaussian copula with that correlation
+gauss_cop <- normalCopula(param = c(rho12, rho13, rho23),
+                          dim   = 3, dispstr = "un")
+
+## 3.  Draw n samples of uniforms (U1,U2,U3) from the copula
+u <- rCopula(n, gauss_cop)        # n × 3 matrix
+
+## 4.  Optional: map to any margins you like
+#     (here we keep them Uniform(0,1); change with qnorm(), qexp(), etc.)
+
+## 5.  Quick verification of signs via sample Kendall’s tau
+kendall <- cor(u, method = "kendall")
+kendall
+#          [,1]      [,2]      [,3]
+# [1,]  1.00000 -0.272xxx  0.411xxx   (signs match design)
+# [2,] -0.272xxx  1.00000 -0.271xxx
+# [3,]  0.411xxx -0.271xxx  1.00000
+
+## 6.  Your simulated data matrix
+head(u)
+
+
+lambda_grid <- seq(0.01, 1 , length.out = 50)
+p <- 0.4
+k <- nrow(sim_data)/10
+num_class <- 5  
+points_log <- c(0,1/4 , 1/3 , 1/2 , 3/4 ,1)
+Grid_points_log <- selectGrid(cst = points_log, d = 3, nonzero  = c( 2,3) )
+
+cl <- makeCluster(6)
+# Export necessary functions and variables to cluster
+clusterExport(cl, varlist = c(   "main_application", "shuffleCols" ,"param_estim_application", "construct_symmetric_matrix",  "normalize_group", "cross_validation_application", "p", "k","Grid_points_log" , "X"  , "num_class"
+                                 , "lambda_grid" 
+))
+clusterEvalQ(cl, { dyn.load("main.dll") })
+
+set.seed(123) 
+
+
+
+
+
+res <- main_oversteps_application( data = u , lambda_grid , grid = Grid_points_log,  start = NULL , 
+                                   type = "SSR_row_log", k, p, num_class , cl )
+
