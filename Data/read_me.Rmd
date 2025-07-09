@@ -1,9 +1,0 @@
----
-title: "readme_data"
-author: "Anas Mourahib"
-date: "2025-07-08"
-output: html_document
----
-
-This is the dataset used in Section 5.2 from our paper. We consider the value-weighted returns for $d=10$ industry portfolios, downloaded from the Kenneth French Data Library\footnote{See~\url{https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/Data_Library/det_10_ind_port.html} for more details about the data and the definition of each portfolio.}: “$1 = $ Nondurables”, “$2 = $ Durables”, “$3 = $ Manufacturing”, “$4 = $ Energy”, “$5 = $ HiTech”, “$6 = $ Telecom”, “$7 = $ Shops”, “$8 = $ Health”, “$9 = $ Utilities”, “$10 = $ Other”. The individual stocks that make up the five industry portfolios are taken from all listed firms on the {NYSE}, {AMEX}, and {NASDAQ}. Data is available between July 1926 and March 2025, leading to a sample of size $n=51\,922$. 
-

@@ -1,0 +1,3 @@
+[submodule "extern/DAMEX"]
+    path = extern/DAMEX
+    url = https://github.com/mchiapino/mevt_anomaly
