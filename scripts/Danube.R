@@ -31,33 +31,33 @@ n <- nrow(X)
 
 
 
-####Choice of tuning parameters 
+####Choice of tuning parameters
 
 lambda_grid <- seq(0.01, 1 , length.out = 50)
 p <- 0.4
 k <- nrow(X)/10
-num_class <- 5  
+num_class <- 5
 points_log <- c(0,1/4 , 1/3 , 1/2 , 3/4 ,1)
 Grid_points_log <- selectGrid(cst = points_log, d = d, nonzero  = c( 2,3) )
 
 cl <- makeCluster(6)
 # Export necessary functions and variables to cluster
 clusterExport(cl, varlist = c(   "main_application", "shuffleCols" ,"param_estim_application", "construct_symmetric_matrix",  "normalize_group", "cross_validation_application", "p", "k","Grid_points_log" , "X"  , "num_class"
-                                 , "lambda_grid" 
+                                 , "lambda_grid"
 ))
 clusterEvalQ(cl, { dyn.load("main.dll") })
 
-set.seed(123) 
+set.seed(123)
 
 
 
 
-
-res <- main_oversteps_application( data = X , lambda_grid , grid = Grid_points_log,  start = NULL , 
-                                      type = "SSR_row_log", k, p, num_class , cl )
+#Detect the extreme directions
+#res <- main_oversteps_application( data = X , lambda_grid , grid = Grid_points_log,  start = NULL ,
+#                                      type = "SSR_row_log", k, p, num_class , cl )
 
 ###To directly get the results res <- readRDS(file = "Results/application/Danube_res0.4.rds")
-#mat is the estimated matrix and coeff the estimated dependence coefficient for the mixture logistic model 
+#mat is the estimated matrix and coeff the estimated dependence coefficient for the mixture logistic model
 mat <- res$Estimation$matrix
 coeff <- res$Estimation$dep
 #extreme directions is a list of the resulting extreme directions
@@ -67,18 +67,18 @@ for(i in 1 : ncol(mat))
   extreme_directions[[i]] <- which(mat[,i] >0  )
 }
 lextreme_direction <- length(extreme_directions)
-#We calcualte the weight of each extreme direction as in Equation~(5.2) from the paper  
+#We calcualte the weight of each extreme direction as in Equation~(5.2) from the paper
 f <- function(vec){
   sum( vec  )^(coeff)
 }
 mat_pow <- mat^(1/coeff)
 pre_weights <- apply(mat_pow , 2 , f   )
-mass_tot <-  sum( pre_weights ) 
+mass_tot <-  sum( pre_weights )
 weights <-  pre_weights / mass_tot
 
 
-#####Performance assessement 
-######## These are the estimated extremal correlations 
+#####Performance assessement
+######## These are the estimated extremal correlations
 mat_ext_corr_estim <- matrix(0 , d , d)
 f<- function(vec) sum(vec^(1/coeff)  )^(coeff)
 for(s in 1 : d){
@@ -92,7 +92,7 @@ matrix_chi_estim <- 2 - mat_ext_corr_estim
 
 
 
-########Empirical extremal correlation matrix 
+########Empirical extremal correlation matrix
 q <- 0.9
 empirical_cdf <- function(x) {
   # rank each x[i] by how many values are ≤ it,
@@ -108,9 +108,9 @@ matrix_chi_emp <- matrix( 0 , nrow = d , ncol = d)
 
 
 for( s in 1:d){
-  vec_s <- X[,s] 
+  vec_s <- X[,s]
   for(t in 1:d){
-    vec_t <- X[,t] 
+    vec_t <- X[,t]
     cdf_s <- empirical_cdf(vec_s)
     cdf_t <- empirical_cdf(vec_t)
     chi_st <- (length(which( (cdf_s >q)  &    (cdf_t >q) )    ) / n )   / (1 - q)
