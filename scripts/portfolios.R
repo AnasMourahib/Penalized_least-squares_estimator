@@ -16,7 +16,7 @@ source("Functions/cross_validation.R")
 source("Functions/main.R")
 source("Functions/main_applications.R")
 
-#########Ewtracting data 
+#########Ewtracting data
 
 data <- read.csv("C:/Users/mourahib/Desktop/github/Penalized_least-squares_estimator/Data/10_Industry_Portfolios_Daily.csv",
                  skip = 9,
@@ -33,7 +33,7 @@ returns_matrix <- returns_matrix[ -bad_rows ,]
 log_returns <-  log((returns_matrix/100) + 1 )
 data <- - log_returns
 
-#We fit a GARCH(1,1) model to each margin as in Equation (5.4) and extract the residuals to remove time dependency 
+#We fit a GARCH(1,1) model to each margin as in Equation (5.4) and extract the residuals to remove time dependency
 
 eps_list <- lapply(1:ncol(data), function(i) {
   gfit <- fit_GARCH_11(data[, i])
@@ -47,14 +47,14 @@ data <- eps_matrix
 
 d <- ncol(data)
 
-#Choice of tuning parameters 
+#Choice of tuning parameters
 ###For p= 0.6, change lambda_grid to :    seq(0.035, 0.055 ,  by = 0.002)
 lambda_grid <- seq(0.001, 0.02 ,  by = 0.002)
 p <- 0.4
 k <- nrow(X)/20
-num_class <- 10  
+num_class <- 10
 points_log <- c(0,1/3  , 2/3 ,1)
-Grid_points_log <- selectGrid(cst = points_log, d = d, nonzero  = c(1, 2) )
+Grid_points_log <- selectGrid(cst = points_log, d = d, nonzero  = c( 2) )
 
 
 
@@ -62,22 +62,22 @@ Grid_points_log <- selectGrid(cst = points_log, d = d, nonzero  = c(1, 2) )
 cl <- makeCluster(6)
 # Export necessary functions and variables to cluster
 clusterExport(cl, varlist = c(   "main_application", "shuffleCols" ,"param_estim_application", "construct_symmetric_matrix",  "normalize_group", "cross_validation_application", "p", "k","Grid_points_log" , "X"  , "num_class"
-                                 , "lambda_grid" 
+                                 , "lambda_grid"
 ))
 clusterEvalQ(cl, { dyn.load("main.dll") })
 
-set.seed(123) 
+set.seed(123)
 
 
 
-res <- main_oversteps_application( data = data , lambda_grid , grid = Grid_points_log,  start = NULL , 
+res <- main_oversteps_application( data = data , lambda_grid , grid = Grid_points_log,  start = NULL ,
                                       type = "SSR_row_log", k, p, num_class , cl )
 
-########### Extracting the results 
+########### Extracting the results
 
 res <- readRDS(file = "C:/Users/mourahib/Desktop/github/Penalized_least-squares_estimator/Results/application/portfolios10res0.4.rds")
 
-#mat is the estimated matrix and coeff the estimated dependence coefficient for the mixture logistic model 
+#mat is the estimated matrix and coeff the estimated dependence coefficient for the mixture logistic model
 mat <- res$Estimation$matrix
 coeff <- res$Estimation$dep
 #extreme directions is a list of the resulting extreme directions
@@ -87,19 +87,19 @@ for(i in 1 : ncol(mat))
   extreme_directions[[i]] <- which(mat[,i] >0  )
 }
 lextreme_direction <- length(extreme_directions)
-#We calcualte the weight of each extreme direction as in Equation~(5.2) from the paper  
+#We calcualte the weight of each extreme direction as in Equation~(5.2) from the paper
 f <- function(vec){
   sum( vec  )^(coeff)
 }
 mat_pow <- mat^(1/coeff)
 pre_weights <- apply(mat_pow , 2 , f   )
-mass_tot <-  sum( pre_weights ) 
+mass_tot <-  sum( pre_weights )
 weights <-  pre_weights / mass_tot
 
 
 
-#####Performance assessement 
-######## These are the estimated extremal correlations 
+#####Performance assessement
+######## These are the estimated extremal correlations
 mat_ext_corr_estim <- matrix(0 , d , d)
 f<- function(vec) sum(vec^(1/coeff)  )^(coeff)
 for(s in 1 : d){
@@ -113,7 +113,7 @@ matrix_chi_estim <- 2 - mat_ext_corr_estim
 
 
 
-########Empirical extremal correlation matrix 
+########Empirical extremal correlation matrix
 q <- 0.95
 empirical_cdf <- function(x) {
   # rank each x[i] by how many values are ≤ it,
@@ -129,9 +129,9 @@ matrix_chi_emp <- matrix( 0 , nrow = d , ncol = d)
 n <- nrow(data)
 
 for( s in 1:d){
-  vec_s <- data[,s] 
+  vec_s <- data[,s]
   for(t in 1:d){
-    vec_t <- data[,t] 
+    vec_t <- data[,t]
     cdf_s <- empirical_cdf(vec_s)
     cdf_t <- empirical_cdf(vec_t)
     chi_st <- (length(which( (cdf_s >q)  &    (cdf_t >q) )    ) / n )   / (1 - q)
