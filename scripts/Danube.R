@@ -6,13 +6,13 @@ library(tailDepFun) # defining a grid
 library(ggplot2) # plotting
 library(tidyverse)
 dyn.load("main.dll")
-source("Functions/Simulation_mixture_model.R")
-source("Functions/Starting_points.R")
-source("Functions/Help_functions.R")
-source("Functions/param_estim.R")
-source("Functions/cross_validation.R")
-source("Functions/main.R")
-source("Functions/main_applications.R")
+source("R/Simulation_mixture_model.R")
+source("R/Starting_points.R")
+source("R/Help_functions.R")
+source("R/param_estim.R")
+source("R/cross_validation.R")
+source("R/main.R")
+source("R/main_applications.R")
 
 
 
@@ -153,5 +153,49 @@ ggplot(df, aes(x = fitted, y = empirical)) +
     axis.text.x  = element_text(size = 22),  # tick‑label font size
     axis.text.y  = element_text(size = 22)
   )
+
+
+#########Estimate the probability of a failure set
+
+
+res <- readRDS("C:/Users/mourahib/Desktop/github/PenalizedLeastSquaresEstimator/Results/application/Danube_res0.4.rds")
+mat <- res$Estimation$matrix
+alpha <- res$Estimation$dep
+
+X_pareto <- apply(X, 2, function(col) {
+  # Empirical ranks (largest = 1)
+  r <- rank(-col, ties.method = "average")
+  n <- length(col)
+  # Transform to Pareto(1): X_i = n / rank_i
+  n / r
+})
+
+Sum_per_observ <- apply(X_pareto ,  1 , sum  )
+#q0.9 is the 0.9 quantile
+threshold <-  seq(0.5 , 1 , by  = 0.05)
+lthreshold <- length(threshold)
+n <- 10^4
+N <- 10^2
+estim_pr <- rep(0 , lthreshold)
+for (j in 1 : lthreshold){
+  q <- quantile(Sum_per_observ , probs = threshold[j])
+  for( i in 1 : N){
+    set.seed(i)
+    X <- N_generate_Mix_log(n , mat , alpha)
+    X_pareto <- apply(X, 2, function(col) {
+      # Empirical ranks (largest = 1)
+      r <- rank(-col, ties.method = "average")
+      n <- length(col)
+      # Transform to Pareto(1): X_i = n / rank_i
+      n / r
+    })
+    Sum_per_observ_i <- apply(X_pareto ,  1 , sum  )
+    estim_pr[j] <- estim_pr[j] + ( (length(which(Sum_per_observ_i > q )) / n ) /(N)    )
+  }
+}
+
+
+
+
 
 
