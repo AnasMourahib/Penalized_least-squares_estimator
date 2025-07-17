@@ -2,6 +2,10 @@ import numpy as np
 import rpy2.robjects as ro
 from rpy2.robjects import numpy2ri
 from rpy2.robjects.conversion import localconverter
+from rpy2.robjects.packages import importr
+
+#Import the necessary packages
+mev = importr('mev')
 
 # Activate automatic conversion globally (optional)
 numpy2ri.activate()
