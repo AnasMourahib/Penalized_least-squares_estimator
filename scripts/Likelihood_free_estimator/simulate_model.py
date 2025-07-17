@@ -16,6 +16,12 @@ ro.r.source("C:/Users/mourahib/Desktop/github/PenalizedLeastSquaresEstimator/R/S
 # Get the R function
 simulate_mixture_model = ro.globalenv['N_generate_Mix_log']
 
+def simulate_model(N , A , alpha) : 
+    with localconverter(ro.default_converter + numpy2ri.converter):
+       result = simulate_mixture_model(N, A, alpha)
+    return result
+
+
 # Prepare the inputs
 N = 100
 A = np.array([
@@ -26,9 +32,5 @@ A = np.array([
 ])
 alpha = 0.25
 
-# Ensure NumPy-to-R conversion works
-with localconverter(ro.default_converter + numpy2ri.converter):
-    result = simulate_mixture_model(N, A, alpha)
+result = simulate_model( N , A , alpha )
 
-# Print the result
-print(result)
