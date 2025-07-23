@@ -160,21 +160,59 @@ ggplot(df, aes(x = fitted, y = empirical)) +
 #########Estimate the probability of a failure set
 
 
+
+############## Fitting a GEV
+
+#Calculate the componentwise maxima each year # Assume X is your matrix
+years <- rownames(X)  # extract year labels
+X_split <- split(data.frame(X), years)  # split by year (turn matrix into data.frame first)
+
+# Compute column-wise max for each year
+yearly_max <- t(sapply(X_split, function(df) apply(df, 2, max)))
+yearly_max <- as.matrix(yearly_max)
+rownames(yearly_max) <- NULL
+colnames(yearly_max) <- NULL
+
+
+
+
+
+
+
+params <- list()
+for(j in 1 : 5){
+  params[[j]] <- fgev(yearly_max[,j])$estimate
+}
+
+
+
 res <- readRDS("C:/Users/mourahib/Desktop/github/PenalizedLeastSquaresEstimator/Results/application/Danube_res0.4.rds")
 mat <- res$Estimation$matrix
 alpha <- res$Estimation$dep
 
-X_pareto <- apply(X, 2, function(col) {
-  # Empirical ranks (largest = 1)
-  r <- rank(-col, ties.method = "average")
-  n <- length(col)
-  # Transform to Pareto(1): X_i = n / rank_i
-  n / r
-})
 
-Sum_per_observ <- apply(X_pareto ,  1 , sum  )
-#q0.9 is the 0.9 quantile
-threshold <-  seq(0.5 , 1 , by  = 0.05)
+Transform_general_gev <- function(Z , params){
+  xi <- params[3]
+  sigma <- params[2]
+  mu <- params[1]
+  return(  mu + (sigma/xi) * (Z^(xi) - 1)  )
+}
+
+
+transform_columns <- function(X, params_list) {
+  stopifnot(ncol(X) == length(params_list))  # Check alignment
+
+  # Apply function to each column
+  result <- sapply(1:ncol(X), function(j) {
+    Transform_general_gev(X[, j], params_list[[j]])
+  })
+
+  # sapply returns a matrix in this case (n x d)
+  return(result)
+}
+
+Sum_per_observ <- apply(X,  1 , sum  )
+threshold <-  seq(0.9 , 0.9 , by  = 0.05)
 lthreshold <- length(threshold)
 n <- 10^4
 N <- 10^2
@@ -183,15 +221,9 @@ for (j in 1 : lthreshold){
   q <- quantile(Sum_per_observ , probs = threshold[j])
   for( i in 1 : N){
     set.seed(i)
-    X <- N_generate_Mix_log(n , mat , alpha)
-    X_pareto <- apply(X, 2, function(col) {
-      # Empirical ranks (largest = 1)
-      r <- rank(-col, ties.method = "average")
-      n <- length(col)
-      # Transform to Pareto(1): X_i = n / rank_i
-      n / r
-    })
-    Sum_per_observ_i <- apply(X_pareto ,  1 , sum  )
+    Y <- N_generate_Mix_log(n , mat , alpha)
+    Y_transformed <- transform_columns(Y, params)
+    Sum_per_observ_i <- apply(Y_transformed ,  1 , sum  )
     estim_pr[j] <- estim_pr[j] + ( (length(which(Sum_per_observ_i > q )) / n ) /(N)    )
   }
 }
@@ -199,5 +231,24 @@ for (j in 1 : lthreshold){
 
 
 
+##QQ-plot
+xi_hat <- params[[3]][3]
+sigma_hat <- params[[3]][2]
+mu_hat <- params[[3]][1]
+gen_par_quantile  <- (sigma_hat / xi_hat) * ((-log(1:n_effective/(n_effective+1) ))^(-xi_hat) - 1 )  + mu_hat
+emp_quantile <- sort(simu)
+
+plot(gen_par_quantile, emp_quantile,
+     main = "Quantile-Quantile Plot",
+     xlab = "gpd quantiles",
+     ylab = "Empirical quantiles")
+
+# Add the y = x line
+abline(a = 0, b = 1, col = "red", lwd = 2, lty = 2)
+
+
+
+
+summary(fit)
 
 
