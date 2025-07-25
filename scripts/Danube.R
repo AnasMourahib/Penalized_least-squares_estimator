@@ -5,6 +5,7 @@ library(gtools) # calculating permutations
 library(tailDepFun) # defining a grid
 library(ggplot2) # plotting
 library(tidyverse)
+library(evd)
 dyn.load("main.dll")
 source("R/Simulation_mixture_model.R")
 source("R/Starting_points.R")
@@ -211,8 +212,8 @@ transform_columns <- function(X, params_list) {
   return(result)
 }
 
-Sum_per_observ <- apply(X,  1 , sum  )
-threshold <-  seq(0.9 , 0.9 , by  = 0.05)
+Sum_per_observ <- apply(yearly_max,  1 , sum  )
+threshold <-  seq(0.5 , 1 , by  = 0.05)
 lthreshold <- length(threshold)
 n <- 10^4
 N <- 10^2
@@ -231,14 +232,17 @@ for (j in 1 : lthreshold){
 
 
 
+
 ##QQ-plot
-xi_hat <- params[[3]][3]
-sigma_hat <- params[[3]][2]
-mu_hat <- params[[3]][1]
+simu <- Y_transformed[,2]
+xi_hat <- params[[2]][3]
+sigma_hat <- params[[2]][2]
+mu_hat <- params[[2]][1]
 gen_par_quantile  <- (sigma_hat / xi_hat) * ((-log(1:n_effective/(n_effective+1) ))^(-xi_hat) - 1 )  + mu_hat
 emp_quantile <- sort(simu)
+emp_quantile2 <- sort(X[,2])
 
-plot(gen_par_quantile, emp_quantile,
+plot(gen_par_quantile, emp_quantile2,
      main = "Quantile-Quantile Plot",
      xlab = "gpd quantiles",
      ylab = "Empirical quantiles")
