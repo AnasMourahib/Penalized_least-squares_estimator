@@ -22,11 +22,7 @@ library("latex2exp")
 juliaEval('using NeuralEstimators, Flux')
 
 
-A <- rbind(c(1/3 , 1/3 , 1/3 , 0),
-           c(1/2 , 0 , 0 , 1/2),
-           c(0 , 3/4 , 1/4 , 0) ,
-           c(0 , 1/2 , 0 , 1/2)
-           )
+
 
 # Sampling from the prior
 # K: number of samples to draw from the prior
@@ -34,11 +30,8 @@ A <- rbind(c(1/3 , 1/3 , 1/3 , 0),
 
 sampler <- function(K) {
   a11 <- runif(K , min = 0 , max = 1)
-  a12 <- runif(K , min = 0 , max = 1)
-  a21 <- runif(K , min = 0 , max = 1)
-  a22 <-  runif(K , min = 0 , max = 1)
   alpha <- runif(K , min = 0 , max = 1)
-  posterior <- matrix( c(alpha, a11 , a12 , a21 , a22) , byrow = TRUE, ncol = K)
+  posterior <- matrix( c(alpha , a11 ) , byrow = TRUE, ncol = K)
   return(posterior)
 }
 
@@ -52,16 +45,13 @@ sampler <- function(K) {
 
 simulate <- function(Theta, m) {
   apply(Theta, 2, function(theta) {
-    A <- matrix( theta[1:4] , byrow = TRUE , nrow = 2  )
-    Z <- N_generate_Mix_log(m , A , theta[5])
+    A <- matrix( c(theta[2] , 1 , 1/2 , 1/2) , byrow = TRUE , nrow = 2  )
+    Z <- N_generate_Mix_log(m , A , theta[1])
     t(Z)
   }, simplify = FALSE)
 }
 
 
-m <- 30
-Z_train <- simulate(theta_train, m)
-Z_val   <- simulate(theta_val, m)
 
 # Initialise the estimator
 estimator <- juliaEval('
@@ -72,9 +62,6 @@ estimator <- juliaEval('
   # Final layer for 5 parameters in (0, 1)
   final_layer = Parallel(
     vcat,
-    Dense(w, 1, σ),
-    Dense(w, 1, σ),
-    Dense(w, 1, σ),
     Dense(w, 1, σ),
     Dense(w, 1, σ)
   )
@@ -107,9 +94,12 @@ estimator <- train(
   epochs = 20
 )
 
-
-theta_test <- matrix( c(0.25 , 0 , 1 , 1/2 , 1/2 ) , ncol = 1)
+K_test <- 1000
+theta_test <- sampler(K_test)
+theta_test[2,1:50] <- 0
 Z_test     <- simulate(theta_test, m)
-assessment <- assess(estimator, theta_test, Z_test, estimator_names = "NBE",  parameter_names = c("alpha", "a11", "a12", "a21" , "a22"))
+assessment <- assess(estimator, theta_test, Z_test, estimator_names = "NBE",  parameter_names = c("alpha", "a"))
 #>  Running NBE...
 plotestimates(assessment)
+
+
