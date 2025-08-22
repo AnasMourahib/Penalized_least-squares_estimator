@@ -103,3 +103,29 @@ assessment <- assess(estimator, theta_test, Z_test, estimator_names = "NBE",  pa
 plotestimates(assessment)
 
 
+ ##########With L1 penalization
+
+
+juliaEval('
+using NeuralEstimators, Flux
+
+# Custom penalized loss: MAE + λ * L1 penalty
+function penalized_mae(estimator, θ_true, θ_pred; λ = 1e-3)
+    mae_loss = Flux.Losses.mae(θ_pred, θ_true)
+    penalty  = λ * sum(abs, θ_pred)   # L1 penalty
+    return mae_loss + penalty
+end
+')
+
+estimator <- juliaCall(
+  "train",
+  estimator,
+  theta_train,     # positional
+  Z_train,         # positional
+  θ_val = theta_val,
+  Z_val = Z_val,
+  epochs = as.integer(20),
+  loss = juliaEval("(θ_pred, θ_true) -> penalized_mae(estimator, θ_true, θ_pred; λ = 1e-3)")
+)
+
+
