@@ -29,9 +29,8 @@ juliaEval('using NeuralEstimators, Flux')
 
 
 sampler <- function(K) {
-  a11 <- runif(K , min = 0 , max = 1)
-  alpha <- runif(K , min = 0 , max = 1)
-  posterior <- matrix( c(alpha , a11 ) , byrow = TRUE, ncol = K)
+  posterior <- runif(K , min = 0 , max = 1)
+  # matrix( c(alpha , a11 ) , byrow = TRUE, ncol = K)
   return(posterior)
 }
 
@@ -42,13 +41,15 @@ sampler <- function(K) {
 # theta: a matrix of parameters drawn from the prior
 # m: number of conditionally independent replicates for each parameter vector
 
+alpha <- 0.25
 
 simulate <- function(Theta, m) {
-  apply(Theta, 2, function(theta) {
-    A <- matrix( c(theta[2] , 1 , 1/2 , 1/2) , byrow = TRUE , nrow = 2  )
-    Z <- N_generate_Mix_log(m , A , theta[1])
+  lapply(Theta ,  function(theta) {
+    A <- matrix( c(theta , 1 , 1/2 , 1/2) , byrow = TRUE , nrow = 2  )
+    Z <- N_generate_Mix_log(m , A , alpha)
     t(Z)
-  }, simplify = FALSE)
+  }
+  )
 }
 
 
@@ -60,11 +61,7 @@ estimator <- juliaEval('
   w = 32   # number of neurons in each hidden layer
 
   # Final layer for 5 parameters in (0, 1)
-  final_layer = Parallel(
-    vcat,
-    Dense(w, 1, σ),
-    Dense(w, 1, σ)
-  )
+  final_layer =  Dense(w, 1, σ)
 
   psi = Chain(Dense(d, w, relu), Dense(w, w, relu), Dense(w, w, relu))
   phi = Chain(Dense(w, w, relu), Dense(w, w, relu), final_layer)
@@ -76,9 +73,9 @@ estimator <- juliaEval('
 K <- 5000
 m <- 250
 theta_train <- sampler(K)
-theta_train[2,1:500] <- 0
+theta_train[1:500] <- 0
 theta_val   <- sampler(K/10)
-theta_val[2,1:500] <- 0
+theta_val[1:50] <- 0
 
 
 Z_train <- simulate(theta_train, m)
@@ -96,14 +93,14 @@ estimator <- train(
 
 K_test <- 1000
 theta_test <- sampler(K_test)
-theta_test[2,1:50] <- 0
+theta_test[1:50] <- 0
 Z_test     <- simulate(theta_test, m)
-assessment <- assess(estimator, theta_test, Z_test, estimator_names = "NBE",  parameter_names = c("alpha", "a"))
+assessment <- assess(estimator, theta_test, Z_test, estimator_names = "NBE",  parameter_names = c( "a"))
 #>  Running NBE...
 plotestimates(assessment)
 
 
- ##########With L1 penalization
+##########With L1 penalization
 
 
 juliaEval('
@@ -127,5 +124,3 @@ estimator <- juliaCall(
   epochs = as.integer(20),
   loss = juliaEval("(θ_pred, θ_true) -> penalized_mae(estimator, θ_true, θ_pred; λ = 1e-3)")
 )
-
-
