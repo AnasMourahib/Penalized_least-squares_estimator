@@ -3,10 +3,9 @@ install.packages("tailDepFun")
 install.packages("graphicalExtremes")
 install.packages("igraph")
 install.packages("mvtnorm")
+install.packages("JuliaConnectoR")
 library("mev")
 library("tailDepFun")
-library("graphicalExtremes")
-library("igraph")
 library("tibble")
 library(mvtnorm)
 library(parallel)
@@ -100,27 +99,44 @@ assessment <- assess(estimator, theta_test, Z_test, estimator_names = "NBE",  pa
 plotestimates(assessment)
 
 
-##########With L1 penalization
 
 
-juliaEval('
-using NeuralEstimators, Flux
 
-# Custom penalized loss: MAE + λ * L1 penalty
-function penalized_mae(estimator, θ_true, θ_pred; λ = 1e-3)
-    mae_loss = Flux.Losses.mae(θ_pred, θ_true)
-    penalty  = λ * sum(abs, θ_pred)   # L1 penalty
-    return mae_loss + penalty
-end
-')
 
-estimator <- juliaCall(
-  "train",
+
+
+
+
+
+
+
+
+##########Test with penalization term
+
+
+juliaEval('include("C:/Users/20254817/Desktop/Githib/Penalized_least-squares_estimator/scripts/Likelihood_free_estimator/penalized_loss.jl")')
+
+
+
+
+#### Test that the Julia function penalized_loss is working
+
+
+juliaEval("isdefined(Main, :penalized_loss)")
+juliaEval("isdefined(Main, :custom_loss)")
+# should return TRUE
+
+juliaEval("penalized_loss([0.1], [0.0] )")
+# should return about 0.1001
+juliaEval("custom_label(0.1 , 0.0)")
+####
+
+estimator <- train(
   estimator,
-  theta_train,     # positional
-  Z_train,         # positional
-  θ_val = theta_val,
-  Z_val = Z_val,
-  epochs = as.integer(20),
-  loss = juliaEval("(θ_pred, θ_true) -> penalized_mae(estimator, θ_true, θ_pred; λ = 1e-3)")
+  theta_train = theta_train,
+  theta_val   = theta_val,
+  Z_train = Z_train,
+  Z_val   = Z_val,
+  epochs = 20,
+   loss = "custom_loss"
 )
