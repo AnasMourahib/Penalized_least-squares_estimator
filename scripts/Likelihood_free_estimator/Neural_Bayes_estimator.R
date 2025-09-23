@@ -61,7 +61,7 @@ estimator <- juliaEval('
   d = 2    # dimension of each replicate
   w = 32   # number of neurons in each hidden layer
 
-  # Final layer for one parameters in [0, 1]
+  # Final layer for one parameter in [0, 1]
   final_layer =  Dense(w, 1, hardσ)
 
   psi = Chain(Dense(d, w, relu), Dense(w, w, relu), Dense(w, w, relu))
