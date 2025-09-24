@@ -26,10 +26,28 @@ juliaEval('using NeuralEstimators, Flux')
 # Sampling from the prior
 # K: number of samples to draw from the prior
 
+interm <- function(u){
+  if(u<0.05 || u>0.95 ){
+    simulation <- sample(c(0,1) , 1 , prob = c(0.5 , 0.5))
+  }
+  else {
+    simulation <- runif(1 , 0 , 1)
+  }
+  return(simulation)
+}
 
-sampler <- function(K) {
-  posterior <- runif(K , min = 0 , max = 1)
-  # matrix( c(alpha , a11 ) , byrow = TRUE, ncol = K)
+unif_w0_1 <- function(n){
+  simulation <- rep(0 , n)
+  u <- runif(n , 0 , 1)
+  simulation <- sapply(u, interm)
+  return(simulation)
+}
+
+sampler <- function(K , dim) {
+  param_a <- unif_w0_1(dim * K )
+  posterior_a <- matrix(param_a , nrow = K )
+  posterior_dep <- runif(K)
+  posterior <- cbind(posterior_a, posterior_dep)
   return(posterior)
 }
 
