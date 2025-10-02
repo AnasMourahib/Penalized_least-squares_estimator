@@ -43,28 +43,52 @@ unif_w0_1 <- function(n){
   return(simulation)
 }
 
+###K : number of samples to draw from the prior
+###dim_A : dimension of the matrix A, for instance, for a 2x2 matrix, dim_A = 4
+## The output is a (dim_A x K) matrix
 sampler <- function(K , dim_A) {
   param_a <- unif_w0_1(dim_A * K )
   posterior_a <- matrix(param_a , nrow = K )
   posterior_dep <- runif(K)
   posterior <- cbind(posterior_a, posterior_dep)
-  return(posterior)
+  return(t(posterior))
 }
 
-
+# theta: a matrix of parameters drawn from the prior
+# m: number of conditionally independent replicates for each parameter vector
+### The output is a (d x m) matrix where d is the dimesioon of the model
 simulate <- function(Theta , m ){
-  apply(Theta , 1 ,  function(theta) {
+  apply(Theta , 2 ,  function(theta) {
     dim_A <- length(theta) - 1
     A <- matrix( theta[-dim_A] , nrow = d , byrow = TRUE  )
     alpha <- theta[dim_A]
-    Z <- N_generate_Mix_log(m , A , alpha)
-    print(Z)
+    Z <- t(N_generate_Mix_log(m , A , alpha))
 
   }, simplify = FALSE
   )
 }
 
 
+# Initialise the estimator
+estimator <- juliaEval('
+
+  d = 2    # dimension of each replicate
+  w = 32   # number of neurons in each hidden layer
+
+  # Final layer for one parameter in [0, 1]
+  final_layer = Parellel(
+  vcat ,
+  Dense(w, 4, hardσ),
+  Dense(w, 1, σ)
+  )
+
+
+
+  psi = Chain(Dense(d, w, relu), Dense(w, w, relu), Dense(w, w, relu))
+  phi = Chain(Dense(w, w, relu), Dense(w, w, relu), final_layer)
+  deepset = DeepSet(psi, phi)
+  estimator = PointEstimator(deepset)
+')
 
 
 
