@@ -45,7 +45,7 @@ unif_w0_1 <- function(n){
 
 ###K : number of samples to draw from the prior
 ###dim_A : dimension of the matrix A, for instance, for a 2x2 matrix, dim_A = 4
-## The output is a (dim_A x K) matrix
+## The output is a ((dim_A) + 1 x K) matrix
 sampler <- function(K , dim_A) {
   param_a <- unif_w0_1(dim_A * K )
   posterior_a <- matrix(param_a , nrow = K )
@@ -56,9 +56,10 @@ sampler <- function(K , dim_A) {
 
 # theta: a matrix of parameters drawn from the prior
 # m: number of conditionally independent replicates for each parameter vector
-### The output is a (d x m) matrix where d is the dimesioon of the model
+### The output is a (d x m) matrix where d is the dimension of the model
 simulate <- function(Theta , m ){
   apply(Theta , 2 ,  function(theta) {
+    print(theta)
     dim_A <- length(theta) - 1
     A <- matrix( theta[-dim_A] , nrow = d , byrow = TRUE  )
     alpha <- theta[dim_A]
@@ -68,6 +69,8 @@ simulate <- function(Theta , m ){
   )
 }
 
+###This is how to check that when a column is zero, the generation process given by N_generate_Mix_log() does not work it does not work
+
 
 # Initialise the estimator
 estimator <- juliaEval('
@@ -75,8 +78,8 @@ estimator <- juliaEval('
   d = 2    # dimension of each replicate
   w = 32   # number of neurons in each hidden layer
 
-  # Final layer for one parameter in [0, 1]
-  final_layer = Parellel(
+  # Final layer for five parameters in [0, 1]
+  final_layer = Parallel(
   vcat ,
   Dense(w, 4, hardσ),
   Dense(w, 1, σ)
@@ -89,6 +92,29 @@ estimator <- juliaEval('
   deepset = DeepSet(psi, phi)
   estimator = PointEstimator(deepset)
 ')
+
+
+
+
+K <- 5000
+m <- 250
+theta_train <- sampler(K = K , dim_A = 4)
+theta_val   <- sampler(K/10 , dim_A = 4)
+Z_train <- simulate(theta_train, m)
+Z_val   <- simulate(theta_val, m)
+
+# Train the estimator
+estimator <- train(
+  estimator,
+  theta_train = theta_train,
+  theta_val   = theta_val,
+  Z_train = Z_train,
+  Z_val   = Z_val,
+  epochs = 20
+)
+
+
+
 
 
 
