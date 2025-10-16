@@ -60,14 +60,15 @@ sampler <- function(K , dim_A) {
 simulate <- function(Theta , m ){
   apply(Theta , 2 ,  function(theta) {
     print(theta)
-    dim_A <- length(theta) - 1
-    A <- matrix( theta[-dim_A] , nrow = d , byrow = TRUE  )
-    alpha <- theta[dim_A]
+    dim <- length(theta) - 1
+    A <- matrix( theta[-dim] , nrow = d , byrow = TRUE  )
+    alpha <- theta[dim]
     Z <- t(N_generate_Mix_log(m , A , alpha))
 
   }, simplify = FALSE
   )
 }
+
 
 ###This is how to check that when a column is zero, the generation process given by N_generate_Mix_log() does not work it does not work
 
