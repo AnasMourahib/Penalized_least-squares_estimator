@@ -59,7 +59,6 @@ sampler <- function(K , dim_A) {
 ### The output is a (d x m) matrix where d is the dimension of the model
 simulate <- function(Theta , m ){
   apply(Theta , 2 ,  function(theta) {
-    print(theta)
     dim <- length(theta) - 1
     A <- matrix( theta[-dim] , nrow = d , byrow = TRUE  )
     alpha <- theta[dim]
@@ -97,7 +96,7 @@ estimator <- juliaEval('
 
 
 
-K <- 5000
+K <- 10^5
 m <- 250
 theta_train <- sampler(K = K , dim_A = 4)
 theta_val   <- sampler(K/10 , dim_A = 4)
@@ -115,6 +114,16 @@ estimator <- train(
 )
 
 
+
+
+
+
+K_test <- 1000
+theta_test <- sampler(K_test, dim_A = 4)
+Z_test     <- simulate(theta_test, m)
+assessment <- assess(estimator, theta_test, Z_test, estimator_names = "NBE",  parameter_names = c( "a11", "a12" , "a21", "a22", "alpha"))
+#>  Running NBE...
+plotestimates(assessment)
 
 
 
