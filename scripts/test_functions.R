@@ -84,7 +84,7 @@ n <- 100
 list <- list()
 count <- 0
 for(i in 1: n){
-  file_path <- paste0("C:/Users/mourahib/Desktop/github/Penalized_least-squares_estimator/Results/DA_mix_HR/extr_dir_ident/wrong_model/kn0.08/result_",i,".rds")
+  file_path <- paste0("C:/Users/20254817/Desktop/Githib/Penalized_least-squares_estimator/Results/DA_mix_log/extreme_direction_identification/wrong model/kn0.08/result_",i,".rds")
   if(file.exists(file_path)){
     count <- count + 1
     result <- readRDS(file_path)
@@ -92,7 +92,7 @@ for(i in 1: n){
   }
   else(print(i))
 }
-saveRDS(list , file= "C:/Users/mourahib/Desktop/github/Penalized_least-squares_estimator/Results/DA_mix_HR/extr_dir_ident/wrong_model/kn0.08.rds" )
+saveRDS(list , file= "C:/Users/20254817/Desktop/Githib/Penalized_least-squares_estimator/Results/DA_mix_log/extreme_direction_identification/wrong model/kn0.08.rds" )
 
 
 
@@ -181,6 +181,40 @@ plot(x_values, SMSE_p0.2 , type = "l", col = colors[1], lty = 1, lwd = 2.5,
 # Add custom x-axis ticks and labels
 axis(1, at = x_values, labels = x_values, cex.axis = 1.3)
 
+######################Plot the DAMEX
+
+
+#################### plot EDS for mix log and mix HR
+
+EDS_mix_log <- readRDS(file =  "C:/Users/20254817/Desktop/Githib/Penalized_least-squares_estimator/Results/EDS_DAMEX_mixlog.RDS")
+EDS_mix_HR <- readRDS(file =  "C:/Users/20254817/Desktop/Githib/Penalized_least-squares_estimator/Results/EDS_DAMEX_mixHR.RDS")
+
+colors <- c( "#56B4E9" , "#E69F00")  # Orange, Blue, Green
+
+# X-axis values
+x_values <- seq(500 , 5000 , by = 500)
+
+# Set up an empty plot with appropriate axis limits
+par(mgp = c(2, 0.7, 0))  # Adjust label position
+plot(x_values, EDS_mix_log , type = "l", col = colors[1], lty = 1, lwd = 2.5,
+     ylim =  c(0 , 1),
+     xlab =  "sample size n" ,
+     ylab = "ED-S",
+     cex.lab = 1.5, cex.axis = 1.3,
+     xaxt = "n")
+
+# Add custom x-axis ticks and labels
+axis(1, at = x_values, labels = x_values, cex.axis = 1.3)
+
+
+
+
+# Add lines for the other vectors
+lines(x_values, EDS_mix_HR , col = colors[2], lty = 1, lwd = 2.5 , type = "l")
+
+# Add circles around the data points
+points(x_values, EDS_mix_log, col = colors[1], pch = 16, cex = 1.5)  # Solid circles
+points(x_values, EDS_mix_HR , col = colors[2], pch = 16, cex = 1.5)
 
 
 
@@ -435,4 +469,54 @@ set.seed(123)
 
 res <- main_oversteps_application( data = u , lambda_grid , grid = Grid_points_log,  start = NULL ,
                                    type = "SSR_row_log", k, p, num_class , cl )
+
+
+
+
+
+############Simulations after review
+################################# Comparison with the DAMEX
+list <- readRDS(file= paste0("C:/Users/20254817/Desktop/Githib/Penalized_least-squares_estimator/Results/DA_mix_log/extreme_direction_identification/True_model/kn0.08.rds"))
+n <- 95
+
+EDscore_mixlog <- rep(0  , 10)
+for( j in 1:10  ){
+  list_matrices <- list()
+  for(i in 1: n){
+    if(is.null(list[[i]]) == FALSE){
+      list_matrices[[i]] <- list[[i]][[j]]$Estimation$matrix
+      scorei <- EDS( list_matrices[[i]] , A)
+      if(scorei>1){print(3)}
+      EDscore_mixlog[j] <- EDscore_mixlog[j] + scorei/n
+    }
+    else(print(i))
+  }
+}
+
+##########plot EDscore extr_iden
+colors <- c("#56B4E9" , "#E69F00" )  # Orange, Blue, Green
+
+# X-axis values
+x_values <- seq(500 , 5000 , by = 500)
+
+# Set up an empty plot with appropriate axis limits
+par(mgp = c(2, 0.7, 0))  # Adjust label position
+plot(x_values, EDscore_mixlog , type = "l", col = colors[1], lty = 1, lwd = 2.5,
+     ylim =  c(0 , 1),
+     xlab =  "sample size n" ,
+     ylab = "ED-S",
+     cex.lab = 1.5, cex.axis = 1.3,
+     xaxt = "n")
+
+# Add custom x-axis ticks and labels
+axis(1, at = x_values, labels = x_values, cex.axis = 1.3)
+
+
+
+
+# Add lines for the other vectors
+lines(x_values, EDscore_mixHR , col = colors[2], lty = 1, lwd = 2.5)
+# Add circles around the data points
+points(x_values, EDscore_mixlog, col = colors[1], pch = 16, cex = 1.5)  # Solid circles
+points(x_values, EDscore_mixHR , col = colors[2], pch = 16, cex = 1.5)
 

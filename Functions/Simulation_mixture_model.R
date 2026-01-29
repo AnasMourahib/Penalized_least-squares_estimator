@@ -36,3 +36,5 @@ N_generate_Mix_hr <- function(N, A, sigma) {
   return(t(M))
 }
 
+
+
