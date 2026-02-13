@@ -20,9 +20,12 @@ lambda_sq <- 1/4
 Sigma <- matrix(lambda_sq , nrow = d , ncol = d )
 diag(Sigma) <- 0
 ######
-mu = seq(0.0001 , 0.01 , by = 0.001)
+mu = seq(0.01 , 0.1 , by = 0.01)
 lext_dir = length(mu)
-size = seq(500  , 5000 , by = 500)
+#size = seq(500  , 15000 , by = 500)
+size <- c(500, 1000, 2500, 5000, 10000, 20000, 40000, 70000, 100000, 150000)
+
+
 lsize = length(size)
 ED_S <- rep(0 , lsize)
 
@@ -32,9 +35,9 @@ for (i in 1:lsize) {
   for (j in seed){
     set.seed(j)
     ###Simulation from the mixture logistic model
-    #X <- N_generate_Mix_log(N , A , alpha)
+    X <- N_generate_Mix_log(N , A , alpha)
     ###Simulation from the mixture HR model
-    X <- N_generate_Mix_hr(N, A, Sigma)
+    #X <- N_generate_Mix_hr(N, A, Sigma)
     Noise <- matrix( rnorm(N * r , mean = 0 , sd = 3)  ,  nrow = N , ncol = r )
     X <- X + Noise
     ext_dir = DAMEX_test(data = X  , mu = mu )

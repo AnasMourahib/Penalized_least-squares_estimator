@@ -476,10 +476,10 @@ res <- main_oversteps_application( data = u , lambda_grid , grid = Grid_points_l
 
 ############Simulations after review
 ################################# Comparison with the DAMEX
-list <- readRDS(file= paste0("C:/Users/20254817/Desktop/Githib/Penalized_least-squares_estimator/Results/DA_mix_log/extreme_direction_identification/True_model/kn0.08.rds"))
-n <- 95
+list <- readRDS(file= paste0("C:/Users/20254817/Desktop/Githib/Penalized_least-squares_estimator/Results/DA_mix_log/extreme_direction_identification/wrong model/kn0.08.rds"))
+n <-92
 
-EDscore_mixlog <- rep(0  , 10)
+EDscore_mixHR <- rep(0  , 10)
 for( j in 1:10  ){
   list_matrices <- list()
   for(i in 1: n){
@@ -487,36 +487,42 @@ for( j in 1:10  ){
       list_matrices[[i]] <- list[[i]][[j]]$Estimation$matrix
       scorei <- EDS( list_matrices[[i]] , A)
       if(scorei>1){print(3)}
-      EDscore_mixlog[j] <- EDscore_mixlog[j] + scorei/n
+      EDscore_mixHR[j] <- EDscore_mixHR[j] + scorei/n
     }
     else(print(i))
   }
 }
 
+
+
 ##########plot EDscore extr_iden
-colors <- c("#56B4E9" , "#E69F00" )  # Orange, Blue, Green
+EDscore_mixlog <- readRDS(file = "C:/Users/20254817/Desktop/Githib/Penalized_least-squares_estimator/Results/EDS_DAMEX_mixlog.RDS")
+EDscore_mixHR <- readRDS(file = "C:/Users/20254817/Desktop/Githib/Penalized_least-squares_estimator/Results/EDS_DAMEX_mixHR.RDS")
 
-# X-axis values
-x_values <- seq(500 , 5000 , by = 500)
+colors <- c("#56B4E9", "#E69F00")  # Blue, Orange
 
-# Set up an empty plot with appropriate axis limits
+# X-axis values (sample sizes)
+x_values <- seq(500 , 5000 , by = 500) #c(500, 1000, 2500, 5000, 10000, 20000, 40000, 70000, 100000, 150000)
+
+# Map the x-values to positions 1,2,...,10
+x_pos <- 1:length(x_values)
+
+# Set up the plot using positions for x
 par(mgp = c(2, 0.7, 0))  # Adjust label position
-plot(x_values, EDscore_mixlog , type = "l", col = colors[1], lty = 1, lwd = 2.5,
-     ylim =  c(0 , 1),
-     xlab =  "sample size n" ,
+plot(x_pos, EDscore_mixlog, type = "l", col = colors[1], lty = 1, lwd = 2.5,
+     ylim = c(0, 1),
+     xlab = "Sample size n",
      ylab = "ED-S",
      cex.lab = 1.5, cex.axis = 1.3,
-     xaxt = "n")
+     xaxt = "n")  # suppress default x-axis
 
-# Add custom x-axis ticks and labels
-axis(1, at = x_values, labels = x_values, cex.axis = 1.3)
+# Add custom x-axis labels evenly spaced
+axis(1, at = x_pos, labels = x_values, cex.axis = 1.3)
 
+# Add lines for the other vector
+lines(x_pos, EDscore_mixHR, col = colors[2], lty = 1, lwd = 2.5)
 
-
-
-# Add lines for the other vectors
-lines(x_values, EDscore_mixHR , col = colors[2], lty = 1, lwd = 2.5)
 # Add circles around the data points
-points(x_values, EDscore_mixlog, col = colors[1], pch = 16, cex = 1.5)  # Solid circles
-points(x_values, EDscore_mixHR , col = colors[2], pch = 16, cex = 1.5)
+points(x_pos, EDscore_mixlog, col = colors[1], pch = 16, cex = 1.5)
+points(x_pos, EDscore_mixHR, col = colors[2], pch = 16, cex = 1.5)
 
