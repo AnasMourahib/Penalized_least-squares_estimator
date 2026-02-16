@@ -526,3 +526,48 @@ lines(x_pos, EDscore_mixHR, col = colors[2], lty = 1, lwd = 2.5)
 points(x_pos, EDscore_mixlog, col = colors[1], pch = 16, cex = 1.5)
 points(x_pos, EDscore_mixHR, col = colors[2], pch = 16, cex = 1.5)
 
+
+
+
+#############Plot from mix hr and HR
+set.seed(11)
+d=2
+N = 100
+lambda_sq <- 1/8
+Sigma <- matrix(lambda_sq , nrow = d , ncol = d )
+diag(Sigma) <- 0
+A = cbind(c(1/2,1/2) , c(1/2 , 0) , c(0 , 1/2) )
+X <- N_generate_Mix_hr( N = N , A , Sigma  )
+
+# Compute thresholds (95% quantiles)
+# Compute thresholds (90% quantiles)
+thr1 <- quantile(X[,1], 0.90)
+thr2 <- quantile(X[,2], 0.90)
+
+# Default color: gray
+point_col <- rep("gray70", nrow(X))
+
+# Color points where X1 is large (orange)
+point_col[X[,1] > thr1] <- "#E69F00"
+
+# Color points where X2 is large (blue)
+point_col[X[,2] > thr2] <- "#56B4E9"
+
+
+point_col[ (X[,2] > thr2)  & (X[,1] > thr1) ] <-   "#009E73"
+# Plot log-log scatter
+# Plot log-log scatter
+plot(log(X[,1]), log(X[,2]),
+     col = point_col,
+     pch = 16,
+     xlab = expression(log(Z[1])),
+     ylab = expression(log(Z[2])),
+     cex = 1.2,
+     cex.lab = 1.5)   # <-- makes log(Z1), log(Z2) larger
+
+# Add grid background
+grid()
+
+
+# Add grid background
+grid()
