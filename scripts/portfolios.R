@@ -16,7 +16,7 @@ source("Functions/cross_validation.R")
 source("Functions/main.R")
 source("Functions/main_applications.R")
 
-#########Ewtracting data
+#########Extracting data
 
 data <- read.csv("C:/Users/mourahib/Desktop/github/Penalized_least-squares_estimator/Data/10_Industry_Portfolios_Daily.csv",
                  skip = 9,
