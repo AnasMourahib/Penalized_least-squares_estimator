@@ -1,3 +1,5 @@
+install.packages("mev")
+library(mev)
 N_generate_Mix_log <- function(N, A, alpha) {
   r <- ncol(A)
   if(length(alpha) == 1){alpha <- rep(alpha,r)}
