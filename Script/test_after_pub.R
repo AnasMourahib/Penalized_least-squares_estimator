@@ -6,26 +6,65 @@ library(mvtnorm)
 dyn.load(normalizePath("main.dll"))
 source("C:/Github/Penalized_least-squares_estimator/R_functions/helper_functions.R")
 source("C:/Github/Penalized_least-squares_estimator/R_functions/estimation.R")
-load("main.dll")
+
 #####Evaluate EDS when sampling and fitting mixture logistic model
-branch_path <- "C:/Results_Github/Penalized_least_squares_estimator/Extreme_directions_identificcation/sample_fit_mix_log"
+branch_path <- "C:/Results_Github/Penalized_least_squares_estimator/Extreme_directions_identificcation/DA_mix_log/Frechet3_Noise/"
 
 n <- 100
-results <- vector("list", n)
-score_EDS <- 0
-for (i in seq_len(n)) {
+N <- seq(500, 5000, by = 500)
+lN <- length(N)
+
+score_EDS <- numeric(lN)
+
+for (i in 1:n) {
   file_path <- file.path(branch_path, paste0("result_", i, ".rds"))
   res <- readRDS(file_path)
+
   true_matrix <- res$True_matrixA
-  estim_matrix <- res$Estimation[[1]]$Estimation$pls_matrix
   true_extreme_directions <- extract_signatures(true_matrix)
-  estim_extreme_directions <- extract_signatures(estim_matrix)
-  EDSi <- EDS(true_extreme_directions , estim_extreme_directions)
-  score_EDS <- score_EDS + EDSi/n
+
+  for (j in seq_along(N)) {  # seq_along(N)
+    N_name <- paste0("N_", N[j])
+
+    estim_matrix <- res$Estimation[[N_name]]$
+      Estimation$kn_0.05$Estimation$pls_matrix
+
+    estim_extreme_directions <- extract_signatures(estim_matrix)
+
+    EDSij <- EDS(
+      true_extreme_directions,
+      estim_extreme_directions
+    )
+    cat("for see" , i , "this is the EDS" , EDSij ,"\n")
+    score_EDS[j] <- score_EDS[j] + EDSij / n
+  }
 }
 
+names(score_EDS) <- paste0("N_", N)
+score_EDS
 
-#####3Estimation of a mixture logistic model
+
+
+######Evaluation of each seed seperatly. Remove this before publication
+true_matrix <- result_3$True_matrixA
+
+estim_matrix <- result_3$Estimation[[2]]$Estimation$pls_matrix
+estim_alpha <-  result_1$Estimation[[2]]$Estimation$pls_dep
+
+lambda <- result_88$Estimation$N_500$Estimation$kn_0.03$lambda_optim
+lambda_grid <- result_88$Estimation$N_500$Estimation$kn_0.03$lambda_grid
+lambda_grid_broad <- result_88$Estimation$N_500$Estimation$kn_0.03$broad_lambda_grid
+
+print(true_matrix)
+print(estim_matrix)
+print(true_alpha)
+print(estim_alpha)
+print(lambda)
+print(lambda_grid)
+print(lambda_grid_broad)
+
+
+#####Estimation of a mixture logistic model
 A <- rbind(
   c(1/3 , 1/3 , 0 , 1/3) ,
   c(1/2 , 1/2 , 0 , 0 ) ,
