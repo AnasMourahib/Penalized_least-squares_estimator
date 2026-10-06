@@ -176,7 +176,7 @@ cross_validation_path_fold2 <- function(class_k, lambda_grid, d, r, grid, num_co
 main_fit <- function(X, w, w_total, lambda_grid, grid, num_col = NULL, start = NULL,
                      type = c("SSR_row_HR", "SSR_row_log"), k, p, num_class = 5, cl,
                      d, r, task, seed, maxit_cv = 250, maxit_final = 1000,
-                     cv_tolerance = 0.001, refined_grid_length = 15, refined_grid = 0 , type_CV = c("cross_validation_path_fold2" , "cross_validation_standard")) {
+                     cv_tolerance = 0.001, refined_grid_length = 15, refined_grid = 0 , type_CV = c("cross_validation_path_fold2" , "cross_validation_standard") , use_cv_tolerance = TRUE) {
   type <- match.arg(type)
   if (is.null(num_col)) num_col <- r
   if (is.null(start)) start <- as.double(t(starting_point(X, num_col)))
@@ -213,13 +213,32 @@ main_fit <- function(X, w, w_total, lambda_grid, grid, num_col = NULL, start = N
 
 
   select_lambda <- function(current_grid, scores) {
-    finite <- which(is.finite(scores)); if (!length(finite)) stop("All CV scores are non-finite.")
-    index_min <- finite[which.min(scores[finite])]; cv_min <- scores[index_min]
-    threshold <- cv_min + cv_tolerance; eligible <- which(is.finite(scores) & scores <= threshold)
-    selected <- eligible[which.max(current_grid[eligible])]
-    list(index_min = index_min, lambda_min = current_grid[index_min], cv_min = cv_min,
-         threshold = threshold, eligible = eligible, selected = selected,
-         lambda_selected = current_grid[selected], cv_selected = scores[selected])
+    finite <- which(is.finite(scores))
+    if (!length(finite)) stop("All CV scores are non-finite.")
+
+    index_min <- finite[which.min(scores[finite])]
+    cv_min <- scores[index_min]
+
+    if (use_cv_tolerance) {
+      threshold <- cv_min + cv_tolerance
+      eligible <- which(is.finite(scores) & scores <= threshold)
+      selected <- eligible[which.max(current_grid[eligible])]
+    } else {
+      threshold <- cv_min
+      eligible <- index_min
+      selected <- index_min
+    }
+
+    list(
+      index_min = index_min,
+      lambda_min = current_grid[index_min],
+      cv_min = cv_min,
+      threshold = threshold,
+      eligible = eligible,
+      selected = selected,
+      lambda_selected = current_grid[selected],
+      cv_selected = scores[selected]
+    )
   }
 
   broad_grid <- as.numeric(lambda_grid); broad_eval <- evaluate_grid(broad_grid)
