@@ -4,7 +4,6 @@
 # and define/load stdfEmp().
 # ============================================================
 
-
 param_estim_path_fold2 <- function(d, r, grid, lambda, num_col = NULL, start, start_dep = NULL,
                                    type = c("SSR_row_HR", "SSR_row_log"), p, w, task = NULL,
                                    seed = NULL, maxit = 1000) {
@@ -124,58 +123,93 @@ cross_validation_standard <- function(lambda, d, r, grid, num_col = NULL, start,
 
 
 
-cross_validation_path_fold2 <- function(class_k, lambda_grid, d, r, grid, num_col = NULL,
-                                        start, type = c("SSR_row_HR", "SSR_row_log"), p,
-                                        w_train, w_test, task, seed, maxit_cv = 250) {
+cross_validation_path_fold2 <- function(class_k, lambda_grid, d, r, grid, num_col = NULL, start, type = c("SSR_row_HR", "SSR_row_log"), p, w_train, w_test, task, seed, maxit_cv = 250) {
   type <- match.arg(type)
   if (is.null(num_col)) num_col <- r
-  q <- nrow(grid); l <- d * num_col; v <- if (type == "SSR_row_HR") d * (d - 1L) / 2L else 1L
-  lambda_order <- order(lambda_grid, decreasing = TRUE); lambda_sorted <- lambda_grid[lambda_order]
-  scores_sorted <- rep(Inf, length(lambda_sorted)); current_A <- start
+
+  q <- nrow(grid)
+  l <- d * num_col
+  v <- if (type == "SSR_row_HR") d * (d - 1L) / 2L else 1L
+
+  lambda_order <- order(lambda_grid, decreasing = TRUE)
+  lambda_sorted <- lambda_grid[lambda_order]
+  scores_sorted <- rep(Inf, length(lambda_sorted))
+  current_A <- start
   current_dep <- if (type == "SSR_row_HR") rep(0.2, v) else 0.2
-  p_C <- as.double(p); d_C <- as.integer(d); num_col_C <- as.integer(num_col)
-  q_C <- as.integer(q); grid_C <- as.double(t(grid)); test_w_C <- as.double(w_test[[class_k]])
+
+  p_C <- as.double(p)
+  d_C <- as.integer(d)
+  num_col_C <- as.integer(num_col)
+  q_C <- as.integer(q)
+  grid_C <- as.double(t(grid))
+  test_w_C <- as.double(w_test[[class_k]])
 
   for (j in seq_along(lambda_sorted)) {
-    fit <- tryCatch(param_estim_path_fold2(d, r, grid, lambda_sorted[j], num_col, current_A, current_dep,
-                                           type, p, w_train[[class_k]], task, seed, maxit_cv),
-                    error = function(e) NULL)
+    fit <- tryCatch(
+      param_estim_path_fold2(d, r, grid, lambda_sorted[j], num_col, current_A, current_dep, type, p, w_train[[class_k]], task, seed, maxit_cv),
+      error = function(e) {
+        message("Fold ", class_k, ", lambda ", lambda_sorted[j], ": ", conditionMessage(e))
+        NULL
+      }
+    )
+
     if (is.null(fit)) next
+
     dep_C <- if (type == "SSR_row_log") rep(fit$pls_dep_vector, num_col) else fit$pls_dep_vector
-    score <- .C(type, p_C, as.double(0), as.double(t(fit$pls_matrix)), d_C, num_col_C,
-                q_C, as.double(dep_C), test_w_C, grid_C, R = double(1))$R
+
+    score <- .C(type, p_C, as.double(0), as.double(t(fit$pls_matrix)), d_C, num_col_C, q_C, as.double(dep_C), test_w_C, grid_C, R = double(1))$R
+
     if (is.finite(score)) scores_sorted[j] <- score
+
     if (length(fit$par) == l + v && all(is.finite(fit$par))) {
-      current_A <- fit$par[seq_len(l)]; current_dep <- fit$par[l + seq_len(v)]
+      current_A <- fit$par[seq_len(l)]
+      current_dep <- fit$par[l + seq_len(v)]
     }
   }
-  scores <- rep(Inf, length(lambda_grid)); scores[lambda_order] <- scores_sorted; scores
+
+  scores <- rep(Inf, length(lambda_grid))
+  scores[lambda_order] <- scores_sorted
+  scores
 }
 
 main_fit <- function(X, w, w_total, lambda_grid, grid, num_col = NULL, start = NULL,
                      type = c("SSR_row_HR", "SSR_row_log"), k, p, num_class = 5, cl,
                      d, r, task, seed, maxit_cv = 250, maxit_final = 1000,
-                     cv_tolerance = 0.001, refined_grid_length = 15, refined_grid = 0) {
+                     cv_tolerance = 0.001, refined_grid_length = 15, refined_grid = 0 , type_CV = c("cross_validation_path_fold2" , "cross_validation_standard")) {
   type <- match.arg(type)
   if (is.null(num_col)) num_col <- r
   if (is.null(start)) start <- as.double(t(starting_point(X, num_col)))
   if (length(start) != d * num_col) stop("start must have length d * num_col.")
-
+  type_CV <- match.arg(type_CV)
   evaluate_grid <- function(current_grid) {
-    if (identical(task, "ED_identification")) {
-      fold_scores <- parallel::parLapply(cl, seq_len(num_class), cross_validation_path_fold2,
-                                         lambda_grid = current_grid, d = d, r = r, grid = grid, num_col = num_col,
-                                         start = start, type = type, p = p, w_train = w$train, w_test = w$test,
-                                         task = task, seed = seed, maxit_cv = maxit_cv)
-      score_matrix <- do.call(rbind, fold_scores); scores <- colMeans(score_matrix)
+    if (type_CV == "cross_validation_path_fold2") {
+      fold_scores <- parallel::parLapply(
+        cl, seq_len(num_class), cross_validation_path_fold2,
+        lambda_grid = current_grid, d = d, r = r, grid = grid,
+        num_col = num_col, start = start, type = type, p = p,
+        w_train = w$train, w_test = w$test, task = task,
+        seed = seed, maxit_cv = maxit_cv
+      )
+
+      score_matrix <- do.call(rbind, fold_scores)
+      scores <- colMeans(score_matrix)
+
     } else {
-      scores <- unlist(parallel::parLapply(cl, current_grid, cross_validation_standard,
-                                           d = d, r = r, grid = grid, num_col = num_col, start = start, type = type,
-                                           p = p, w = w, num_class = num_class, task = task, seed = seed, maxit_cv = maxit_cv))
+      scores <- unlist(parallel::parLapply(
+        cl, current_grid, cross_validation_standard,
+        d = d, r = r, grid = grid, num_col = num_col,
+        start = start, type = type, p = p, w = w,
+        num_class = num_class, task = task, seed = seed,
+        maxit_cv = maxit_cv
+      ))
+
       score_matrix <- matrix(scores, nrow = 1L)
     }
-    scores[!is.finite(scores)] <- Inf; list(scores = scores, score_matrix = score_matrix)
+
+    scores[!is.finite(scores)] <- Inf
+    list(scores = scores, score_matrix = score_matrix)
   }
+
 
   select_lambda <- function(current_grid, scores) {
     finite <- which(is.finite(scores)); if (!length(finite)) stop("All CV scores are non-finite.")
