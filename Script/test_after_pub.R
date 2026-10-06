@@ -151,3 +151,49 @@ fit_test$Estimation$pls_matrix
 fit_test$Estimation$pls_dep
 fit_test$cv_scores
 
+
+
+
+#######This is only for analyzing the results, remove it before publication
+
+
+d <- 3
+points_HR <- c(0 , runif(1 , 0.2 , 0.4)   , runif(1 , 0.6 , 0.8) , runif(1 , 0.8 , 0.9) ,1)
+Grid_points_HR <- selectGrid(cst = points_HR, d = d, nonzero = c(2,3))
+head(Grid_points_HR)
+q_HR <- nrow(Grid_points_HR)
+print(q_HR)
+
+q_old <- nrow(selectGrid(cst = points_HR, d = 3, nonzero = 2))
+q_new <- nrow(selectGrid(cst = points_HR, d = 3, nonzero = c(2, 3)))
+
+q_old
+q_new
+q_new / q_old
+
+
+######Evaluation of each seed seperatly. Remove this before publication
+true_matrix <- result_3$True_matrixA
+
+estim_matrix <- result_3$Estimation[[2]]$Estimation$pls_matrix
+estim_Gamma <-  result_3$Estimation[[2]]$Estimation$pls_dep
+
+Gamma <- matrix(c(
+  0,     0.08,  0.14,
+  0.08,  0,     0.22,
+  0.14,  0.22,  0
+), nrow = 3, byrow = TRUE)
+
+
+lambda <- result_1$Estimation[[2]]$lambda_min
+
+lambda_grid <- result_1$Estimation[[2]]$lambda_grid
+
+
+
+print(true_matrix)
+print(estim_matrix)
+print(Gamma)
+print(estim_Gamma)
+print(lambda_grid)
+print(lambda)
