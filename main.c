@@ -157,7 +157,7 @@ double mvnorm_cdf_genz(int m, const double *upper, const double *Sigma) {
         }
     }
 
-    int nu = 0, maxpts = 25000 * m, inform = 0, rnd = 1;
+    int nu = 0, maxpts = 25000 * m, inform = 0, rnd = 0;
     double abseps = 1e-8, releps = 1e-8, estimated_error = 0.0, value = 0.0;
 
     mvtnorm_C_mvtdst(&m, &nu, lower, upper_std, infin, correl, delta,
@@ -398,7 +398,7 @@ void SSR_row_HR(double *p, double *lambda, double *theta, int *d, int *k, int *q
     double x[*d];
     for (int m = 0; m < *q; m++) {
         for (int i = 0; i < *d; i++) x[i] = Grid_points[(*d) * m + i];
-        double interm = stdf_mix_HR_d(*d, x, *k, flatM, Gamma_mat);
+        double interm = bi_stdf_mix_HR(*d, x, *k, flatM, Gamma_mat);
         if (!R_FINITE(interm)) { *R = 1e16; break; }
         *R += pow(w[m] - interm, 2.0);
     }
