@@ -45,23 +45,6 @@ score_EDS
 
 
 
-######Evaluation of each seed seperatly. Remove this before publication
-true_matrix <- result_3$True_matrixA
-
-estim_matrix <- result_3$Estimation[[2]]$Estimation$pls_matrix
-estim_alpha <-  result_1$Estimation[[2]]$Estimation$pls_dep
-
-lambda <- result_88$Estimation$N_500$Estimation$kn_0.03$lambda_optim
-lambda_grid <- result_88$Estimation$N_500$Estimation$kn_0.03$lambda_grid
-lambda_grid_broad <- result_88$Estimation$N_500$Estimation$kn_0.03$broad_lambda_grid
-
-print(true_matrix)
-print(estim_matrix)
-print(true_alpha)
-print(estim_alpha)
-print(lambda)
-print(lambda_grid)
-print(lambda_grid_broad)
 
 
 #####Estimation of a mixture logistic model

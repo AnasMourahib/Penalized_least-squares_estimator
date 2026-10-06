@@ -110,8 +110,8 @@ cross_validation_standard <- function(lambda, d, r, grid, num_col = NULL, start,
   if (is.null(num_col)) num_col <- r
   q <- nrow(grid); scores <- rep(Inf, num_class)
   for (class_k in seq_len(num_class)) {
-    fit <- tryCatch(param_estim(d, r, grid, lambda, num_col, start, NULL, type, p,
-                                w$train[[class_k]], task, seed, maxit_cv), error = function(e) NULL)
+    fit <- tryCatch(param_estim_path_fold2(d, r, grid, lambda, num_col, start, NULL, type, p,
+                                           w$train[[class_k]], task, seed, maxit_cv), error = function(e) NULL)
     if (is.null(fit)) next
     dep_C <- if (type == "SSR_row_log") rep(fit$pls_dep_vector, num_col) else fit$pls_dep_vector
     scores[class_k] <- .C(type, as.double(p), as.double(0), as.double(t(fit$pls_matrix)),
@@ -120,6 +120,7 @@ cross_validation_standard <- function(lambda, d, r, grid, num_col = NULL, start,
   }
   if (all(!is.finite(scores))) Inf else mean(scores[is.finite(scores)])
 }
+
 
 
 
