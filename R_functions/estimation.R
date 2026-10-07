@@ -4,114 +4,92 @@
 # and define/load stdfEmp().
 # ============================================================
 
-param_estim_path_fold2 <- function(d, r, grid, lambda, num_col = NULL, start, start_dep = NULL,
-                                   type = c("SSR_row_HR", "SSR_row_log"), p, w, task = NULL,
-                                   seed = NULL, maxit = 1000) {
+
+
+param_estim_path_fold2 <- function(d, r, grid, lambda, num_col = NULL, start, start_dep = NULL, type = c("SSR_row_HR", "SSR_row_log"), p, w, task = NULL, seed = NULL, maxit = 1000, refit_dep_after_joint = FALSE) {
   type <- match.arg(type)
   if (is.null(num_col)) num_col <- r
   if (!is.null(seed)) set.seed(seed)
 
-  q <- nrow(grid)
-  l <- d * num_col
+  q <- nrow(grid); l <- d * num_col
   v <- if (type == "SSR_row_HR") d * (d - 1L) / 2L else 1L
 
   if (length(start) != l) stop("start must have length d * num_col.")
   if (length(w) != q) stop("w must have length nrow(grid).")
+  if (!is.logical(refit_dep_after_joint) || length(refit_dep_after_joint) != 1L || is.na(refit_dep_after_joint)) stop("refit_dep_after_joint must be TRUE or FALSE.")
 
-  if (is.null(start_dep)) start_dep <- if (type == "SSR_row_HR") rep(0.2, v) else runif(1, 0.15, 0.25)
+  if (is.null(start_dep)) start_dep <- if (type == "SSR_row_HR") rep(0.5, v) else runif(1, 0.15, 0.25)
   if (length(start_dep) == 1L && v > 1L) start_dep <- rep(start_dep, v)
   if (length(start_dep) != v) stop("start_dep has the wrong length.")
 
   start <- pmin(pmax(start, 0), 1)
-  start_dep <- if (type == "SSR_row_HR") pmin(pmax(start_dep, 0.1), 2) else pmin(pmax(start_dep, 0.1), 0.3)
+  start_dep <- if (type == "SSR_row_HR") pmin(pmax(start_dep, 0.2), 1) else pmin(pmax(start_dep, 0.1), 0.3)
 
-  p_C <- as.double(p)
-  lambda_C <- as.double(lambda)
-  d_C <- as.integer(d)
-  num_col_C <- as.integer(num_col)
-  q_C <- as.integer(q)
-  w_C <- as.double(w)
-  grid_C <- as.double(t(grid))
+  p_C <- as.double(p); lambda_C <- as.double(lambda)
+  d_C <- as.integer(d); num_col_C <- as.integer(num_col); q_C <- as.integer(q)
+  w_C <- as.double(w); grid_C <- as.double(t(grid))
 
   call_ssr <- function(theta_A, theta_dep, penalty = lambda_C) {
     dep_C <- if (type == "SSR_row_log") rep(theta_dep, num_col) else theta_dep
-
-    value <- .C(type, p_C, as.double(penalty), as.double(theta_A), d_C,
-                num_col_C, q_C, as.double(dep_C), w_C, grid_C,
-                R = double(1))$R
-
+    value <- .C(type, p_C, as.double(penalty), as.double(theta_A), d_C, num_col_C, q_C, as.double(dep_C), w_C, grid_C, R = double(1))$R
     if (is.finite(value)) value else 1e16
   }
 
-  lower_dep <- rep(0.1, v)
-  upper_dep <- if (type == "SSR_row_log") rep(0.3, v) else rep(2, v)
+  lower_dep <- if (type == "SSR_row_log") rep(0.1, v) else rep(0.2, v)
+  upper_dep <- if (type == "SSR_row_log") rep(0.3, v) else rep(1, v)
 
-  # Stage 1: jointly estimate A and the dependence parameters
-  objective_joint <- function(theta) {
-    theta_A <- theta[seq_len(l)]
-    theta_dep <- theta[l + seq_len(v)]
-    call_ssr(theta_A, theta_dep)
-  }
-
-  fit_joint <- optim(c(start, start_dep), objective_joint, method = "L-BFGS-B",
-                     lower = c(rep(0, l), lower_dep),
-                     upper = c(rep(1, l), upper_dep),
-                     control = list(maxit = maxit))
+  # Stage 1: jointly estimate A and dependence
+  objective_joint <- function(theta) call_ssr(theta[seq_len(l)], theta[l + seq_len(v)])
+  fit_joint <- optim(c(start, start_dep), objective_joint, method = "L-BFGS-B", lower = c(rep(0, l), lower_dep), upper = c(rep(1, l), upper_dep), control = list(maxit = maxit))
 
   theta_A <- fit_joint$par[seq_len(l)]
   theta_dep <- fit_joint$par[l + seq_len(v)]
   A_joint <- matrix(theta_A, nrow = d, ncol = num_col, byrow = TRUE)
   dep_joint <- if (type == "SSR_row_HR") construct_symmetric_matrix_2(theta_dep) else theta_dep
 
-  # Stop after joint estimation for extreme-direction identification
+  # ED identification: stop after joint estimation
   if (identical(task, "ED_identification")) {
-    return(list(pls_matrix = A_joint, pls_dep = dep_joint,
-                pls_dep_vector = theta_dep, par = fit_joint$par,
-                convergence = fit_joint$convergence,
-                objective = fit_joint$value, counts = fit_joint$counts,
-                message = fit_joint$message))
+    return(list(pls_matrix = A_joint, pls_dep = dep_joint, pls_dep_vector = theta_dep, par = fit_joint$par, convergence = fit_joint$convergence, objective = fit_joint$value, counts = fit_joint$counts, message = fit_joint$message))
   }
 
-  # Stage 2: fix dependence parameters and estimate A
+  # Alternative: fix joint A, re-estimate dependence, then stop
+  if (refit_dep_after_joint) {
+    objective_dep <- function(theta) call_ssr(theta_A, theta, penalty = 0)
+    fit_dep <- optim(theta_dep, objective_dep, method = "L-BFGS-B", lower = lower_dep, upper = upper_dep, control = list(maxit = maxit))
+
+    dep_vector <- fit_dep$par
+    dep_final <- if (type == "SSR_row_HR") construct_symmetric_matrix_2(dep_vector) else dep_vector
+
+    return(list(pls_matrix = A_joint, pls_dep = dep_final, pls_dep_vector = dep_vector, par = c(theta_A, dep_vector), convergence = fit_dep$convergence, objective = fit_dep$value, counts = fit_dep$counts, message = fit_dep$message, joint_fit = fit_joint, dependence_fit = fit_dep))
+  }
+
+  # Original Stage 2: fix dependence and re-estimate A
   objective_A <- function(theta) call_ssr(theta, theta_dep)
+  fit_A <- optim(theta_A, objective_A, method = "L-BFGS-B", lower = rep(0, l), upper = rep(1, l), control = list(maxit = maxit))
 
-  fit_A <- optim(theta_A, objective_A, method = "L-BFGS-B",
-                 lower = rep(0, l), upper = rep(1, l),
-                 control = list(maxit = maxit))
-
-  A_final <- matrix(normalize_group(fit_A$par, num_col),
-                    nrow = d, ncol = num_col, byrow = TRUE)
-
+  A_final <- matrix(normalize_group(fit_A$par, num_col), nrow = d, ncol = num_col, byrow = TRUE)
   A_vector <- as.double(t(A_final))
 
-  # Stage 3: fix A and estimate dependence parameters, with penalty equal to 0
+  # Original Stage 3: fix normalized A and re-estimate dependence
   objective_dep <- function(theta) call_ssr(A_vector, theta, penalty = 0)
-
-  fit_dep <- optim(theta_dep, objective_dep, method = "L-BFGS-B",
-                   lower = lower_dep, upper = upper_dep,
-                   control = list(maxit = maxit))
+  fit_dep <- optim(theta_dep, objective_dep, method = "L-BFGS-B", lower = lower_dep, upper = upper_dep, control = list(maxit = maxit))
 
   dep_vector <- fit_dep$par
   dep_final <- if (type == "SSR_row_HR") construct_symmetric_matrix_2(dep_vector) else dep_vector
 
-  list(pls_matrix = A_final, pls_dep = dep_final,
-       pls_dep_vector = dep_vector, par = c(A_vector, dep_vector),
-       convergence = fit_dep$convergence, objective = fit_dep$value,
-       counts = fit_dep$counts, message = fit_dep$message,
-       joint_fit = fit_joint, A_fit = fit_A, dependence_fit = fit_dep)
+  list(pls_matrix = A_final, pls_dep = dep_final, pls_dep_vector = dep_vector, par = c(A_vector, dep_vector), convergence = fit_dep$convergence, objective = fit_dep$value, counts = fit_dep$counts, message = fit_dep$message, joint_fit = fit_joint, A_fit = fit_A, dependence_fit = fit_dep)
 }
-
 
 
 cross_validation_standard <- function(lambda, d, r, grid, num_col = NULL, start,
                                       type = c("SSR_row_HR", "SSR_row_log"), p, w,
-                                      num_class = 5, task, seed, maxit_cv = 250) {
+                                      num_class = 5, task, seed, maxit_cv = 250 ,  refit_dep_after_joint ) {
   type <- match.arg(type)
   if (is.null(num_col)) num_col <- r
   q <- nrow(grid); scores <- rep(Inf, num_class)
   for (class_k in seq_len(num_class)) {
     fit <- tryCatch(param_estim_path_fold2(d, r, grid, lambda, num_col, start, NULL, type, p,
-                                           w$train[[class_k]], task, seed, maxit_cv), error = function(e) NULL)
+                                           w$train[[class_k]], task, seed, maxit_cv , refit_dep_after_joint ), error = function(e) NULL)
     if (is.null(fit)) next
     dep_C <- if (type == "SSR_row_log") rep(fit$pls_dep_vector, num_col) else fit$pls_dep_vector
     scores[class_k] <- .C(type, as.double(p), as.double(0), as.double(t(fit$pls_matrix)),
@@ -123,8 +101,7 @@ cross_validation_standard <- function(lambda, d, r, grid, num_col = NULL, start,
 
 
 
-
-cross_validation_path_fold2 <- function(class_k, lambda_grid, d, r, grid, num_col = NULL, start, type = c("SSR_row_HR", "SSR_row_log"), p, w_train, w_test, task, seed, maxit_cv = 250) {
+cross_validation_path_fold2 <- function(class_k, lambda_grid, d, r, grid, num_col = NULL, start, type = c("SSR_row_HR", "SSR_row_log"), p, w_train, w_test, task, seed, maxit_cv = 250 ,  refit_dep_after_joint) {
   type <- match.arg(type)
   if (is.null(num_col)) num_col <- r
 
@@ -147,7 +124,7 @@ cross_validation_path_fold2 <- function(class_k, lambda_grid, d, r, grid, num_co
 
   for (j in seq_along(lambda_sorted)) {
     fit <- tryCatch(
-      param_estim_path_fold2(d, r, grid, lambda_sorted[j], num_col, current_A, current_dep, type, p, w_train[[class_k]], task, seed, maxit_cv),
+      param_estim_path_fold2(d, r, grid, lambda_sorted[j], num_col, current_A, current_dep, type, p, w_train[[class_k]], task, seed, maxit_cv ,  refit_dep_after_joint),
       error = function(e) {
         message("Fold ", class_k, ", lambda ", lambda_sorted[j], ": ", conditionMessage(e))
         NULL
@@ -173,10 +150,11 @@ cross_validation_path_fold2 <- function(class_k, lambda_grid, d, r, grid, num_co
   scores
 }
 
+
 main_fit <- function(X, w, w_total, lambda_grid, grid, num_col = NULL, start = NULL,
                      type = c("SSR_row_HR", "SSR_row_log"), k, p, num_class = 5, cl,
                      d, r, task, seed, maxit_cv = 250, maxit_final = 1000,
-                     cv_tolerance = 0.001, refined_grid_length = 15, refined_grid = 0 , type_CV = c("cross_validation_path_fold2" , "cross_validation_standard") , use_cv_tolerance = TRUE) {
+                     cv_tolerance = 0.001, refined_grid_length = 15, refined_grid = 0 , type_CV = c("cross_validation_path_fold2" , "cross_validation_standard") , use_cv_tolerance = TRUE ,refit_dep_after_joint) {
   type <- match.arg(type)
   if (is.null(num_col)) num_col <- r
   if (is.null(start)) start <- as.double(t(starting_point(X, num_col)))
@@ -189,7 +167,7 @@ main_fit <- function(X, w, w_total, lambda_grid, grid, num_col = NULL, start = N
         lambda_grid = current_grid, d = d, r = r, grid = grid,
         num_col = num_col, start = start, type = type, p = p,
         w_train = w$train, w_test = w$test, task = task,
-        seed = seed, maxit_cv = maxit_cv
+        seed = seed, maxit_cv = maxit_cv , refit_dep_after_joint = refit_dep_after_joint
       )
 
       score_matrix <- do.call(rbind, fold_scores)
@@ -201,7 +179,7 @@ main_fit <- function(X, w, w_total, lambda_grid, grid, num_col = NULL, start = N
         d = d, r = r, grid = grid, num_col = num_col,
         start = start, type = type, p = p, w = w,
         num_class = num_class, task = task, seed = seed,
-        maxit_cv = maxit_cv
+        maxit_cv = maxit_cv , refit_dep_after_joint = refit_dep_after_joint
       ))
 
       score_matrix <- matrix(scores, nrow = 1L)
@@ -253,7 +231,7 @@ main_fit <- function(X, w, w_total, lambda_grid, grid, num_col = NULL, start = N
   }
 
   estimation <- param_estim_path_fold2(d, r, grid, final_sel$lambda_selected, num_col, start, NULL,
-                                       type, p, w_total, task, seed, maxit_final)
+                                       type, p, w_total, task, seed, maxit_final , refit_dep_after_joint)
   list(lambda_optim = final_sel$lambda_selected, selected_index = final_sel$selected,
        cv_score_selected = final_sel$cv_selected, lambda_min = final_sel$lambda_min,
        index_min = final_sel$index_min, cv_min = final_sel$cv_min,
@@ -264,6 +242,8 @@ main_fit <- function(X, w, w_total, lambda_grid, grid, num_col = NULL, start = N
        broad_cv_scores = broad_eval$scores, broad_cv_score_matrix = broad_eval$score_matrix,
        broad_selection = broad_sel, refined_grid_used = refined_grid != 0)
 }
+
+
 
 main_oversteps <- function(lambda_grid, N, grid, start = NULL,
                            type = c("SSR_row_HR", "SSR_row_log"), k, p,

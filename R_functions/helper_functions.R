@@ -91,6 +91,28 @@ simulate_sparse_A <- function(d, r, sparse_proportion, min_nonzero_per_row = 2L,
   stop("No valid support found.")
 }
 
+
+simulate_sparse_A_pairs <- function(d = 3L, r = 3L, min_value = 0.1, max_value = 0.9) {
+  if (d != 3L || r != 3L) stop("This function requires d = r = 3.")
+  if (min_value <= 0 || max_value <= min_value) stop("Invalid value range.")
+
+  # Column signatures: {1,2}, {1,3}, {2,3}
+  support <- matrix(c(
+    1, 1, 0,
+    1, 0, 1,
+    0, 1, 1
+  ), nrow = 3, byrow = TRUE)
+
+  A <- matrix(0, nrow = d, ncol = r)
+  A[support == 1L] <- runif(sum(support), min = min_value, max = max_value)
+
+  # Normalize each row to sum to one
+  A <- A / rowSums(A)
+
+  return(A)
+}
+
+
 empirical_cdf <- function(x) rank(x, ties.method = "max") / length(x)
 
 fun_estimate_empirical_corr <- function(X, q) {
