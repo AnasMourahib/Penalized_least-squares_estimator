@@ -6,6 +6,7 @@
 
 
 
+
 param_estim_path_fold2 <- function(d, r, grid, lambda, num_col = NULL, start, start_dep = NULL, type = c("SSR_row_HR", "SSR_row_log"), p, w, task = NULL, seed = NULL, maxit = 1000, refit_dep_after_joint = FALSE) {
   type <- match.arg(type)
   if (is.null(num_col)) num_col <- r
@@ -14,16 +15,17 @@ param_estim_path_fold2 <- function(d, r, grid, lambda, num_col = NULL, start, st
   q <- nrow(grid); l <- d * num_col
   v <- if (type == "SSR_row_HR") d * (d - 1L) / 2L else 1L
 
+
   if (length(start) != l) stop("start must have length d * num_col.")
   if (length(w) != q) stop("w must have length nrow(grid).")
   if (!is.logical(refit_dep_after_joint) || length(refit_dep_after_joint) != 1L || is.na(refit_dep_after_joint)) stop("refit_dep_after_joint must be TRUE or FALSE.")
 
-  if (is.null(start_dep)) start_dep <- if (type == "SSR_row_HR") rep(0.5, v) else runif(1, 0.15, 0.25)
+  if (is.null(start_dep)) start_dep <- if (type == "SSR_row_HR") rep(0.3, v) else runif(1, 0.15, 0.25)
   if (length(start_dep) == 1L && v > 1L) start_dep <- rep(start_dep, v)
   if (length(start_dep) != v) stop("start_dep has the wrong length.")
 
   start <- pmin(pmax(start, 0), 1)
-  start_dep <- if (type == "SSR_row_HR") pmin(pmax(start_dep, 0.2), 1) else pmin(pmax(start_dep, 0.1), 0.3)
+  start_dep <- if (type == "SSR_row_HR") pmin(pmax(start_dep, 0.2), 0.5) else pmin(pmax(start_dep, 0.1), 0.3)
 
   p_C <- as.double(p); lambda_C <- as.double(lambda)
   d_C <- as.integer(d); num_col_C <- as.integer(num_col); q_C <- as.integer(q)
@@ -35,8 +37,9 @@ param_estim_path_fold2 <- function(d, r, grid, lambda, num_col = NULL, start, st
     if (is.finite(value)) value else 1e16
   }
 
-  lower_dep <- if (type == "SSR_row_log") rep(0.1, v) else rep(0.2, v)
+  lower_dep <- if (type == "SSR_row_log") rep(0.1, v) else rep(0.05, v)
   upper_dep <- if (type == "SSR_row_log") rep(0.3, v) else rep(1, v)
+
 
   # Stage 1: jointly estimate A and dependence
   objective_joint <- function(theta) call_ssr(theta[seq_len(l)], theta[l + seq_len(v)])
@@ -150,7 +153,6 @@ cross_validation_path_fold2 <- function(class_k, lambda_grid, d, r, grid, num_co
   scores
 }
 
-
 main_fit <- function(X, w, w_total, lambda_grid, grid, num_col = NULL, start = NULL,
                      type = c("SSR_row_HR", "SSR_row_log"), k, p, num_class = 5, cl,
                      d, r, task, seed, maxit_cv = 250, maxit_final = 1000,
@@ -245,49 +247,151 @@ main_fit <- function(X, w, w_total, lambda_grid, grid, num_col = NULL, start = N
 
 
 
-main_oversteps <- function(lambda_grid, N, grid, start = NULL,
-                           type = c("SSR_row_HR", "SSR_row_log"), k, p,
-                           num_class = 5, cl, type_noise = NULL, shape = NULL,
-                           d, r, sparse_proportion, X, q = nrow(grid), R, task, seed,
-                           max_num_col = 5, zero_tolerance = 1e-8,
-                           maxit_cv = 250, maxit_final = 1000,
-                           cv_tolerance = 0.001, refined_grid_length = 15,
-                           refined_grid = 0, verbose = TRUE) {
+main_oversteps_path_fold <- function(
+    lambda_grid, N, grid, start = NULL,
+    type = c("SSR_row_HR", "SSR_row_log"), k, p, num_class = 5, cl,
+    type_noise = NULL, shape = NULL, d, r, sparse_proportion,
+    X, q, R, task, seed, max_num_col = 5, zero_tolerance = 1e-8,
+    maxit_cv = 250, maxit_final = 1000, cv_tolerance = 0.001,
+    refined_grid_length = 15, refined_grid = 0,
+    type_CV = c("cross_validation_path_fold2", "cross_validation_standard"),
+    use_cv_tolerance = TRUE, refit_dep_after_joint = FALSE,
+    verbose = TRUE
+) {
   type <- match.arg(type)
-  if (q != nrow(grid)) stop("q must equal nrow(grid).")
-  w <- W_calculus(k, num_class, X, grid, q)
-  w_total <- vapply(seq_len(q), function(m) stdfEmp(R, k, grid[m, ]), numeric(1))
-  diagnostics <- vector("list", max_num_col); last_valid <- NULL; last_num_col <- 0L
+  type_CV <- match.arg(type_CV)
 
-  for (num_col in seq_len(max_num_col)) {
-    scaled_grid <- sqrt(log(d * num_col)) * lambda_grid
-    fit <- main_fit(X, w, w_total, scaled_grid, grid, num_col,
-                    if (num_col == 1L) start else NULL, type, k, p, num_class, cl,
-                    d, r, task, seed, maxit_cv, maxit_final, cv_tolerance,
-                    refined_grid_length, refined_grid)
-    A_hat <- fit$Estimation$pls_matrix
-    zero_columns <- colSums(abs(A_hat) > zero_tolerance) == 0L
-    diagnostics[[num_col]] <- c(fit, list(num_col = num_col,
-      num_parameters = d * num_col + if (type == "SSR_row_HR") d * (d - 1L) / 2L else 1L,
-      estimated_matrix = A_hat, column_norms = sqrt(colSums(A_hat^2)), zero_columns = zero_columns))
+  if (length(lambda_grid) < 2L || any(!is.finite(lambda_grid)) || any(lambda_grid <= 0)) stop("lambda_grid must contain at least two finite, strictly positive values.")
+  if (length(max_num_col) != 1L || !is.finite(max_num_col) || max_num_col < 1L || max_num_col != as.integer(max_num_col)) stop("max_num_col must be one positive integer.")
+  if (length(zero_tolerance) != 1L || !is.finite(zero_tolerance) || zero_tolerance < 0) stop("zero_tolerance must be one finite, nonnegative number.")
+  if (length(cv_tolerance) != 1L || !is.finite(cv_tolerance) || cv_tolerance < 0) stop("cv_tolerance must be one finite, nonnegative number.")
+  if (length(refined_grid_length) != 1L || !is.finite(refined_grid_length) || refined_grid_length < 3L || refined_grid_length != as.integer(refined_grid_length)) stop("refined_grid_length must be one integer of at least 3.")
+  if (!is.logical(use_cv_tolerance) || length(use_cv_tolerance) != 1L || is.na(use_cv_tolerance)) stop("use_cv_tolerance must be TRUE or FALSE.")
+  if (!is.logical(refit_dep_after_joint) || length(refit_dep_after_joint) != 1L || is.na(refit_dep_after_joint)) stop("refit_dep_after_joint must be TRUE or FALSE.")
+
+  max_num_col <- as.integer(max_num_col)
+  refined_grid_length <- as.integer(refined_grid_length)
+
+  w <- W_calculus(k = k, num_class = num_class, X = X, grid = grid, q = q)
+  w_total <- vapply(seq_len(q), function(m) stdfEmp(R, k, grid[m, ]), numeric(1))
+
+  diagnostics <- vector("list", max_num_col)
+  last_valid_Estimation <- NULL
+  last_valid_num_col <- 0L
+  num_col <- 1L
+
+  while (num_col <= max_num_col) {
+    num_parameters <- d * num_col
+    scaled_lambda_grid <- sqrt(log(num_parameters)) * lambda_grid
+
     if (verbose) {
-      cat("num_col =", num_col, "| lambda =", fit$lambda_optim, "\n"); print(A_hat)
-      cat("zero columns:", paste(which(zero_columns), collapse = ", "), "\n")
+      cat("\n----------------------------------------------------\n")
+      cat("Testing num_col =", num_col, "\n")
+      cat("Penalization grid:\n")
+      print(scaled_lambda_grid)
+      flush.console()
     }
-    if (any(zero_columns)) break
-    last_valid <- fit; last_num_col <- num_col
+
+    current_start <- if (num_col == 1L) start else NULL
+
+    current_Estimation <- main_fit(
+      X = X, w = w, w_total = w_total,
+      lambda_grid = scaled_lambda_grid, grid = grid,
+      num_col = num_col, start = current_start,
+      type = type, k = k, p = p, num_class = num_class, cl = cl,
+      d = d, r = r, task = task, seed = seed,
+      maxit_cv = maxit_cv, maxit_final = maxit_final,
+      cv_tolerance = cv_tolerance,
+      refined_grid_length = refined_grid_length,
+      refined_grid = refined_grid,
+      type_CV = type_CV,
+      use_cv_tolerance = use_cv_tolerance,
+      refit_dep_after_joint = refit_dep_after_joint
+    )
+
+    A_hat <- current_Estimation$Estimation$pls_matrix
+    column_norms <- sqrt(colSums(A_hat^2))
+    zero_columns <- colSums(abs(A_hat) > zero_tolerance) == 0L
+
+    diagnostics[[num_col]] <- list(
+      num_col = num_col,
+      num_parameters = num_parameters,
+      selected_index = current_Estimation$selected_index,
+      lambda_optim = current_Estimation$lambda_optim,
+      cv_score_selected = current_Estimation$cv_score_selected,
+      index_min = current_Estimation$index_min,
+      lambda_min = current_Estimation$lambda_min,
+      cv_min = current_Estimation$cv_min,
+      cv_tolerance = current_Estimation$cv_tolerance,
+      cv_threshold = current_Estimation$cv_threshold,
+      eligible_indices = current_Estimation$eligible_indices,
+      lambda_grid = current_Estimation$lambda_grid,
+      cv_scores = current_Estimation$cv_scores,
+      cv_score_matrix = current_Estimation$cv_score_matrix,
+      broad_lambda_grid = current_Estimation$broad_lambda_grid,
+      broad_cv_scores = current_Estimation$broad_cv_scores,
+      broad_cv_score_matrix = current_Estimation$broad_cv_score_matrix,
+      broad_selection = current_Estimation$broad_selection,
+      refined_grid_used = current_Estimation$refined_grid_used,
+      type_CV = type_CV,
+      use_cv_tolerance = use_cv_tolerance,
+      refit_dep_after_joint = refit_dep_after_joint,
+      estimated_matrix = A_hat,
+      estimated_dependence = current_Estimation$Estimation$pls_dep,
+      column_norms = column_norms,
+      zero_columns = zero_columns,
+      convergence = current_Estimation$Estimation$convergence,
+      counts = current_Estimation$Estimation$counts,
+      objective = current_Estimation$Estimation$objective
+    )
+
+    if (verbose) {
+      cat("Minimum-CV lambda:", current_Estimation$lambda_min,
+          "at index", current_Estimation$index_min, "\n")
+      cat("Selected lambda:", current_Estimation$lambda_optim,
+          "at index", current_Estimation$selected_index, "\n")
+      cat("Minimum CV score:", current_Estimation$cv_min, "\n")
+      cat("CV score at selected lambda:",
+          current_Estimation$cv_score_selected, "\n")
+      cat("Estimated matrix:\n")
+      print(A_hat)
+      cat("Column L2 norms:\n")
+      print(column_norms)
+      cat("Zero-column indicators:\n")
+      print(zero_columns)
+      cat("Optimizer convergence code:",
+          current_Estimation$Estimation$convergence, "\n")
+      flush.console()
+    }
+
+    if (any(zero_columns)) {
+      if (verbose) {
+        cat("--> Zero column detected at num_col =", num_col, "\n")
+        cat("--> Zero-column indices:", which(zero_columns), "\n")
+
+        if (last_valid_num_col > 0L) {
+          cat("--> Returning the last model without a zero column, with num_col =",
+              last_valid_num_col, "\n")
+        } else {
+          cat("--> No preceding model without a zero column is available.\n")
+        }
+      }
+      break
+    }
+
+    last_valid_Estimation <- current_Estimation
+    last_valid_num_col <- num_col
+    num_col <- num_col + 1L
   }
 
   diagnostics <- diagnostics[!vapply(diagnostics, is.null, logical(1))]
-  if (is.null(last_valid)) { last_valid <- fit; last_num_col <- 1L }
-  last_valid$num_col <- last_num_col; last_valid$diagnostics <- diagnostics; last_valid
-}
 
-setup_estimation_workers <- function(cl, main_file, helper_file, dll_file) {
-  paths <- normalizePath(c(main_file, helper_file, dll_file), mustWork = TRUE)
-  parallel::clusterExport(cl, "paths", envir = environment())
-  parallel::clusterEvalQ(cl, {
-    source(paths[2L]); source(paths[1L]); library(mvtnorm); dyn.load(paths[3L]); NULL
-  })
-  invisible(parallel::clusterEvalQ(cl, c(HR = is.loaded("SSR_row_HR"), log = is.loaded("SSR_row_log"))))
+  if (is.null(last_valid_Estimation)) {
+    last_valid_Estimation <- current_Estimation
+    last_valid_num_col <- 1L
+  }
+
+  last_valid_Estimation$num_col <- last_valid_num_col
+  last_valid_Estimation$diagnostics <- diagnostics
+  last_valid_Estimation
 }

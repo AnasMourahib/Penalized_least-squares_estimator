@@ -74,21 +74,47 @@ EDS <- function(L1, L2) {
   1 - length(intersect(s1, s2)) / length(union_set)
 }
 
-simulate_sparse_A <- function(d, r, sparse_proportion, min_nonzero_per_row = 2L,
-                              require_nonzero_columns = TRUE, max_attempts = 10000L) {
-  if (d < 1L || r < 1L || sparse_proportion < 0 || sparse_proportion >= 1) stop("Invalid dimensions or sparsity.")
-  target <- d * r - round(sparse_proportion * d * r)
-  minimum <- max(d * min_nonzero_per_row, if (require_nonzero_columns) r else 0L)
-  if (target < minimum || (require_nonzero_columns && r > 2^d - 1L)) stop("Requested support is infeasible.")
-  for (attempt in seq_len(max_attempts)) {
-    S <- matrix(0L, d, r); S[sample.int(d * r, target)] <- 1L
+simulate_sparse_A <- function(d, r, sparse_proportion = 0.3, support = NULL, min_nonzero_per_row = 2L, require_nonzero_columns = TRUE, max_attempts = 10000L) {
+  if (d < 1L || r < 1L) stop("d and r must be positive.")
+  if (sparse_proportion < 0 || sparse_proportion >= 1) stop("sparse_proportion must be in [0,1).")
+
+  is_valid <- function(S) {
     signatures <- apply(S, 2, paste0, collapse = "")
-    valid <- all(rowSums(S) >= min_nonzero_per_row) && (!require_nonzero_columns || all(colSums(S) > 0L)) && length(unique(signatures)) == r
-    if (valid) {
-      A <- matrix(0, d, r); A[S == 1L] <- runif(sum(S), 0.1, 0.9); return(A / rowSums(A))
-    }
+    all(rowSums(S) >= min_nonzero_per_row) &&
+      (!require_nonzero_columns || all(colSums(S) > 0L)) &&
+      length(unique(signatures)) == r
   }
-  stop("No valid support found.")
+
+  if (!is.null(support)) {
+    if (!is.matrix(support) || !all(dim(support) == c(d, r))) stop("support must be a d x r matrix.")
+    if (!all(support %in% c(0, 1))) stop("support must contain only 0 and 1.")
+    support_matrix <- matrix(as.integer(support), nrow = d, ncol = r)
+
+    if (!is_valid(support_matrix)) stop("The specified support does not satisfy the constraints.")
+  } else {
+    total_entries <- d * r
+    target_nonzero <- total_entries - round(sparse_proportion * total_entries)
+    minimum_nonzero <- max(d * min_nonzero_per_row, if (require_nonzero_columns) r else 0L)
+
+    if (target_nonzero < minimum_nonzero) stop("The requested sparsity is incompatible with the constraints.")
+
+    support_matrix <- NULL
+    for (attempt in seq_len(max_attempts)) {
+      candidate <- matrix(0L, d, r)
+      candidate[sample.int(total_entries, target_nonzero)] <- 1L
+      if (is_valid(candidate)) {
+        support_matrix <- candidate
+        break
+      }
+    }
+
+    if (is.null(support_matrix)) stop("No valid support found.")
+  }
+
+  A <- matrix(0, d, r)
+  A[support_matrix == 1L] <- runif(sum(support_matrix), 0.1, 0.9)
+  A <- A / rowSums(A)
+  A
 }
 
 

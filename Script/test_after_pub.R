@@ -7,43 +7,75 @@ dyn.load(normalizePath("main.dll"))
 source("C:/Github/Penalized_least-squares_estimator/R_functions/helper_functions.R")
 source("C:/Github/Penalized_least-squares_estimator/R_functions/estimation.R")
 
-#####Evaluate EDS when sampling and fitting mixture logistic model
-branch_path <- "C:/Results_Github/Penalized_least_squares_estimator/Extreme_directions_identificcation/DA_mix_log/Frechet3_Noise/"
 
+
+
+
+
+d <- 3
+points_HR <- c(0  , runif(1 , 0.4 , 0.6) , runif(1 , 0.4 , 0.6) ,   runif(1 , 0.4 , 0.6) ,  runif(1 , 0.4 , 0.6) ,  runif(1 , 0.4 , 0.6),  runif(1 , 0.4 , 0.6)   , runif(1 , 0.6 , 0.8) , runif(1 , 0.8 , 0.9) ,1)
+Grid_points_HR <- selectGrid(cst = points_HR, d = d, nonzero = c(2))
+Grid_points <- Grid_points_HR
+q <- nrow(Grid_points)
+q
+######Evaluation of each seed seperatly. Remove this before publication
+Gamma <- matrix(c(
+  0,   0.3, 0.5,
+  0.3, 0,   0.7,
+  0.5, 0.7, 0
+), nrow = 3, byrow = TRUE)
+
+true_matrix <- result_10$True_matrixA
+
+estim_matrix <- result_10$Estimation[[1]]$Estimation$pls_matrix
+estim_Gamma <-  result_10$Estimation[[1]]$Estimation$pls_dep
+
+lambda <- result_7$Estimation[[1]]$lambda_min
+
+lambda_grid <- result_6$Estimation[[1]]$lambda_grid
+
+
+print(true_matrix)
+print(estim_matrix)
+print(Gamma)
+print(estim_Gamma)
+print(lambda_grid)
+print(lambda)
+
+
+
+
+
+
+
+
+
+branch_path <- "C:/Results_Github/Penalized_least_squares_estimator/Extreme_directions_identificcation/DA_mix_HR/"
+EDS_score <- 0
 n <- 100
-N <- seq(500, 5000, by = 500)
-lN <- length(N)
-
-score_EDS <- numeric(lN)
-
-for (i in 1:n) {
+for(i in 1:n){
   file_path <- file.path(branch_path, paste0("result_", i, ".rds"))
   res <- readRDS(file_path)
-
+  lambda <- res$Estimation[[1]]$lambda_min
+  lambda_grid <- res$Estimation[[1]]$lambda_grid
+  #print(lambda)
+  #print(lambda_grid)
   true_matrix <- res$True_matrixA
+  #cat("this is the true matrix \n" )
+  #print(true_matrix)
   true_extreme_directions <- extract_signatures(true_matrix)
-
-  for (j in seq_along(N)) {  # seq_along(N)
-    N_name <- paste0("N_", N[j])
-
-    estim_matrix <- res$Estimation[[N_name]]$
-      Estimation$kn_0.05$Estimation$pls_matrix
-
-    estim_extreme_directions <- extract_signatures(estim_matrix)
-
-    EDSij <- EDS(
-      true_extreme_directions,
-      estim_extreme_directions
-    )
-    cat("for see" , i , "this is the EDS" , EDSij ,"\n")
-    score_EDS[j] <- score_EDS[j] + EDSij / n
-  }
+  estim_matrix <- res$Estimation[[1]]$Estimation$pls_matrix
+  #cat("this is the estimated matrix\n" )
+  #print(estim_matrix)
+  estim_extreme_directions <- extract_signatures(estim_matrix)
+  EDSij <- EDS(
+    true_extreme_directions,
+    estim_extreme_directions
+  )
+  print(EDSij)
+  EDS_score <- EDS_score + EDSij/n
 }
-
-names(score_EDS) <- paste0("N_", N)
-score_EDS
-
-
+EDS_score
 
 
 
